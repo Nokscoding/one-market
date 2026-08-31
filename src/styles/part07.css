@@ -1,0 +1,186 @@
+
+
+@media(max-width:760px){
+  body{padding-bottom:0}
+  .section-shell{width:calc(100% - 20px)}
+  .market-topbar-inner{height:54px;width:calc(100% - 12px);gap:8px}
+  .market-header .brand-logo{width:94px;height:42px;padding:1px;border-radius:4px}
+  .market-menu-button.mobile-only{display:grid;place-items:center;flex:0 0 auto}
+  .market-search{display:none!important}
+  .market-account{width:38px;height:38px;display:grid;place-items:center;padding:0}
+  .mobile-account-icon{display:block}
+  .market-cart{gap:0}
+  .market-cart>strong{display:none}
+  .market-cart-icon b{top:-7px;right:-2px;border-color:var(--navy);font-size:10px}
+  .mobile-market-search{display:flex;height:43px;margin:0 8px 8px;background:#fff;border-radius:7px;overflow:hidden}
+  .mobile-market-search:focus-within{outline:2px solid #5c84f7}
+  .mobile-market-search input{flex:1;border:0!important;padding:0 12px!important;background:#fff!important;font-size:15px;outline:0}
+  .mobile-market-search button{width:48px;border:0;background:var(--blue);color:#fff;display:grid;place-items:center}
+  .market-subnav{height:36px}
+  .market-subnav-inner{width:100%;gap:19px;overflow-x:auto;padding:0 10px;scrollbar-width:none}
+  .market-subnav-inner::-webkit-scrollbar{display:none}
+  .market-subnav .all-link{display:none}
+  .subnav-message{display:none}
+  .market-subnav a{font-size:12px;flex:0 0 auto}
+  .market-mobile-menu{top:97px}
+
+  .market-home{padding-bottom:20px}
+  .market-hero-wrap{background:#dfe6f3}
+  .market-hero{width:100%;padding:10px;gap:10px}
+  .market-hero-copy{border-radius:7px;padding:22px 18px}
+  .market-hero-copy h1{font-size:29px;line-height:1.08;margin-bottom:10px}
+  .market-hero-copy p{font-size:13px;line-height:1.45;margin-bottom:15px}
+  .market-hero-copy>a{font-size:13px;padding:9px 11px}
+  .market-hero-products{display:none}
+
+  .marketplace-panels{width:100%;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:8px;padding:0 10px 4px;margin-top:10px;scrollbar-width:none}
+  .marketplace-panels::-webkit-scrollbar{display:none}
+  .market-panel{flex:0 0 86vw;scroll-snap-align:start;padding:14px;border-radius:7px}
+  .market-panel-title h2{font-size:20px}
+  .mini-product-image,.panel-category>div{height:125px}
+  .marketplace-strip{width:calc(100% - 20px);margin-top:10px;grid-template-columns:1fr}
+  .marketplace-strip>div{min-height:62px;border-right:0;border-bottom:1px solid #eee;padding:10px 14px}
+  .marketplace-strip>div:last-child{border-bottom:0}
+  .market-product-section,.market-store-section{width:100%;border-left:0;border-right:0;border-radius:0;margin-top:10px;padding:14px 10px}
+  .market-section-heading h2{font-size:21px}
+  .market-section-heading a{font-size:12px}
+
+  .page-space{padding-top:20px;padding-bottom:38px}
+  .page-title{margin-bottom:14px}
+  .page-title h1{font-size:25px}
+  .product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 8px}
+  .product-media{border-radius:4px!important}
+  .product-media img{padding:5px}
+  .product-info{padding-top:7px}
+  .product-name{font-size:13px;min-height:34px}
+  .product-price{font-size:17px}
+  .product-store{font-size:10px}
+  .category-row{grid-template-columns:repeat(2,1fr);gap:8px}
+  .category-card{height:88px;border-radius:5px}
+  .store-grid{grid-template-columns:1fr;gap:8px}
+  .store-card{padding:12px}
+  .store-directory{grid-template-columns:1fr!important}
+  .catalog-toolbar{overflow-x:auto;flex-wrap:nowrap;align-items:center;padding-bottom:12px;margin-bottom:14px;scrollbar-width:none}
+  .catalog-toolbar::-webkit-scrollbar{display:none}
+  .catalog-toolbar .filter-title{width:auto;flex:0 0 auto}
+  .catalog-toolbar select{flex:0 0 auto!important;max-width:180px}
+
+  .product-page{padding-top:12px;gap:18px}
+  .product-detail h1{font-size:27px}
+  .purchase-row{bottom:0;margin-inline:-10px;padding:9px 10px;border-top:1px solid #ddd;box-shadow:0 -3px 10px rgba(0,0,0,.07)}
+  .cart-line{border-radius:0!important}
+  .chat-shell{height:calc(100vh - 133px)!important}
+
+  .footer-inner{width:calc(100% - 24px);grid-template-columns:1fr;padding:28px 0;gap:16px;min-height:0}
+}
+
+@media(max-width:380px){
+  .market-header .brand-logo{width:82px}
+  .market-cart-icon svg{width:26px;height:26px}
+  .market-panel{flex-basis:90vw}
+  .mini-product-image,.panel-category>div{height:112px}
+  .product-name{font-size:12px}
+}
+
+/* ==========================================================
+   ONEMARKET PUBLIC V3 — transparent official logo +
+   higher-contrast retail header + tighter mobile layout
+   ========================================================== */
+
+/* The official logo file is transparent. Keep the main header light so
+   the original navy/blue artwork stays fully legible without recoloring. */
+.market-topbar{
+  background:#fff;
+  color:var(--navy);
+  border-bottom:1px solid #d5d9d9;
+}
+.market-topbar-inner{
+  height:72px;
+  gap:14px;
+}
+.market-header .brand-logo{
+  width:100px;
+  height:66px;
+  padding:0;
+  background:transparent;
+  border-radius:0;
+  overflow:visible;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.market-header .brand-logo img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
+}
+.market-location,
+.market-account,
+.market-orders,
+.market-cart,
+.market-cart>strong,
+.market-menu-button{
+  color:var(--navy);
+}
+.market-location small,
+.market-account small,
+.market-orders small{
+  color:#565959;
+}
+.market-location strong,
+.market-account strong,
+.market-orders strong{
+  color:#0f1111;
+}
+.market-account:hover,
+.market-orders:hover,
+.market-cart:hover,
+.market-location:hover{
+  color:var(--blue);
+}
+.market-cart-icon b{
+  border-color:#fff;
+}
+.market-search{
+  border:1px solid #8a8f98!important;
+  box-shadow:none!important;
+}
+.market-search:focus-within{
+  outline:2px solid var(--blue);
+  outline-offset:1px;
+}
+.market-search select{
+  background:#f3f4f5;
+}
+.market-subnav{
+  background:var(--navy);
+  border-bottom:1px solid #07132d;
+}
+
+/* Homepage: more like a real retail marketplace and less like a landing page. */
+.market-hero-wrap{
+  background:#e7ebf2;
+}
+.market-hero{
+  min-height:286px;
+  padding:20px 0;
+}
+.market-hero-copy{
+  border-radius:6px;
+  padding:30px;
+}
+.market-hero-copy h1{
+  font-size:36px;
+}
+.market-hero-products{
+  border-radius:6px;
+  border:1px solid #d5d9d9;
+}
+.market-panel,
+.market-product-section,
+.market-store-section,
+.marketplace-strip{
+  border-radius:6px;
+  box-shadow:none;
+}

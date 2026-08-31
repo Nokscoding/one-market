@@ -1,0 +1,253 @@
+
+
+.product-grid>.product-card:nth-child(n+5){animation-delay:.12s}
+
+@keyframes omCardIn{
+  from{opacity:0;transform:translateY(10px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.product-media img,
+.mini-product img,
+.store-card img,
+.store-cover img,
+.gallery-main img{
+  animation:omImageIn .34s ease-out both;
+}
+
+@keyframes omImageIn{
+  from{opacity:0;filter:saturate(.88)}
+  to{opacity:1;filter:saturate(1)}
+}
+
+@media (hover:hover){
+  .market-product-card{
+    transition:transform .22s cubic-bezier(.2,.8,.2,1),box-shadow .22s ease;
+  }
+  .market-product-card:hover{transform:translateY(-3px)}
+  .store-card,.store-directory-card,.market-panel{
+    transition:transform .22s cubic-bezier(.2,.8,.2,1),box-shadow .22s ease,border-color .22s ease;
+  }
+  .store-card:hover,.store-directory-card:hover{transform:translateY(-2px)}
+}
+
+/* Header and mobile nav arrive as parts of one motion system. */
+.market-header{animation:omHeaderIn .38s cubic-bezier(.22,.61,.36,1) both}
+@keyframes omHeaderIn{
+  from{opacity:0;transform:translateY(-8px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+@media(max-width:760px){
+  .om-loader{min-height:190px}
+  .om-loader--fullscreen{min-height:100dvh}
+  .om-loader-stage{width:112px;height:96px}
+  .om-loader-mark-frame{width:92px}
+  .om-loader-orbit--one{width:106px;height:106px}
+  .om-loader-orbit--two{width:80px;height:80px}
+
+  .mobile-bottom-nav{
+    animation:omMobileNavIn .38s cubic-bezier(.22,.61,.36,1) .08s both;
+  }
+
+  @keyframes omMobileNavIn{
+    from{opacity:0;transform:translateY(18px)}
+    to{opacity:1;transform:translateY(0)}
+  }
+
+  .mobile-bottom-nav>a:active,
+  .mobile-bottom-nav>button:active{transform:scale(.94)}
+
+  .product-grid>.product-card:nth-child(n){animation-delay:0s}
+  .product-grid>.product-card:nth-child(even){animation-delay:.035s}
+
+  .route-stage{animation-duration:.27s}
+}
+
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto!important}
+  *,*::before,*::after{
+    animation-duration:.001ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.001ms!important;
+  }
+  .om-loader-mark{clip-path:none!important;opacity:1!important}
+  .om-loader-scan,.om-loader-orbit{display:none!important}
+}
+
+/* ==========================================================
+   ONEMARKET PUBLIC V6 — INTRO MOTION + LOOPING LOADERS
+   ========================================================== */
+
+/* ----------------------------------------------------------
+   1. ENTRY INTRO
+   Full-site launch sequence. This animation runs once because
+   the React component is removed after the sequence completes.
+   It is deliberately independent from Supabase/network state.
+   ---------------------------------------------------------- */
+html.site-intro-lock,
+body.site-intro-lock{
+  overflow:hidden!important;
+}
+
+.site-intro{
+  position:fixed;
+  inset:0;
+  z-index:100000;
+  overflow:hidden;
+  pointer-events:all;
+  isolation:isolate;
+  background:#fff;
+}
+
+.site-intro-underlay{
+  position:absolute;
+  inset:0;
+  z-index:0;
+  background:#fff;
+  transition:opacity .6s cubic-bezier(.65,0,.35,1);
+}
+
+.site-intro-panel{
+  position:absolute;
+  top:0;
+  bottom:0;
+  z-index:1;
+  width:50.5%;
+  will-change:transform;
+  transition:transform .66s cubic-bezier(.76,0,.24,1);
+}
+
+.site-intro-panel--left{
+  left:0;
+  background:#fff;
+}
+
+.site-intro-panel--right{
+  right:0;
+  background:linear-gradient(180deg,#fff 0%,#f6f9ff 100%);
+}
+
+.site-intro-motion{
+  position:absolute;
+  inset:0;
+  z-index:3;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  transition:opacity .4s ease,transform .58s cubic-bezier(.22,.61,.36,1);
+}
+
+.site-intro-mark-wrap{
+  position:relative;
+  z-index:5;
+  width:clamp(220px,24vw,340px);
+  aspect-ratio:835/608;
+  overflow:hidden;
+  filter:drop-shadow(0 14px 26px rgba(11,24,53,.10));
+}
+
+.site-intro-mark{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  opacity:0;
+  clip-path:inset(0 100% 0 0);
+  animation:omIntroMarkReveal .72s cubic-bezier(.65,0,.35,1) .24s forwards;
+}
+
+.site-intro-mark-sweep{
+  position:absolute;
+  inset:0;
+  z-index:2;
+  opacity:0;
+  transform:translateX(-130%);
+  background:linear-gradient(
+    105deg,
+    transparent 28%,
+    rgba(255,255,255,0) 40%,
+    rgba(255,255,255,.9) 49%,
+    rgba(90,140,255,.54) 54%,
+    rgba(255,255,255,0) 65%,
+    transparent 75%
+  );
+  -webkit-mask-image:url('https://res.cloudinary.com/nks-services/image/upload/v1788106209/one-market-logo.webp');
+  -webkit-mask-repeat:no-repeat;
+  -webkit-mask-position:center;
+  -webkit-mask-size:contain;
+  mask-image:url('https://res.cloudinary.com/nks-services/image/upload/v1788106209/one-market-logo.webp');
+  mask-repeat:no-repeat;
+  mask-position:center;
+  mask-size:contain;
+  animation:omIntroSweep .78s cubic-bezier(.4,0,.2,1) .66s forwards;
+}
+
+.site-intro-halo{
+  position:absolute;
+  z-index:2;
+  width:min(42vw,430px);
+  aspect-ratio:1;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(9,76,233,.12) 0%,rgba(9,76,233,.04) 34%,transparent 70%);
+  opacity:0;
+  animation:omIntroHalo 1.25s cubic-bezier(.22,.61,.36,1) .18s forwards;
+}
+
+.site-intro-beam{
+  position:absolute;
+  z-index:4;
+  height:1px;
+  width:min(44vw,560px);
+  opacity:0;
+  transform-origin:center;
+}
+
+.site-intro-beam--one{
+  background:linear-gradient(90deg,transparent,var(--blue),transparent);
+  animation:omIntroBeamOne .82s cubic-bezier(.65,0,.35,1) .1s forwards;
+}
+
+.site-intro-beam--two{
+  width:1px;
+  height:min(36vh,330px);
+  background:linear-gradient(180deg,transparent,rgba(11,24,53,.42),transparent);
+  animation:omIntroBeamTwo .76s cubic-bezier(.65,0,.35,1) .18s forwards;
+}
+
+.site-intro-accent{
+  position:absolute;
+  z-index:4;
+  left:50%;
+  bottom:calc(50% - 150px);
+  width:28px;
+  height:3px;
+  border-radius:999px;
+  background:var(--blue);
+  opacity:0;
+  transform:translateX(-50%);
+  animation:omIntroAccent .5s ease .9s forwards;
+}
+
+.site-intro--leaving .site-intro-panel--left{
+  transform:translateX(-101%);
+}
+
+.site-intro--leaving .site-intro-panel--right{
+  transform:translateX(101%);
+}
+
+.site-intro--leaving .site-intro-underlay{
+  opacity:0;
+}
+
+.site-intro--leaving .site-intro-motion{
+  opacity:0;
+  transform:translateY(-10px);
+}
+
+@keyframes omIntroMarkReveal{
+  0%{opacity:0;clip-path:inset(0 100% 0 0);transform:translateY(5px)}
+  18%{opacity:1}
+  100%{opacity:1;clip-path:inset(0 0 0 0);transform:translateY(0)}
+}

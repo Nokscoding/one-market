@@ -1,0 +1,248 @@
+
+
+@media(max-width:390px){
+  .market-header .brand-logo{width:84px;height:47px}
+  .market-topbar-inner{height:52px}
+  .mobile-search-row{padding-inline:9px;gap:7px}
+  .mobile-market-search{height:47px}
+  .mobile-location-button{width:47px;height:47px;flex-basis:47px}
+  .market-subnav a{padding-inline:13px}
+  .market-hero-copy,.market-hero-products{flex-basis:90vw}
+  .market-hero-copy{min-height:300px;padding:24px 19px}
+  .market-hero-copy h1{font-size:31px}
+  .market-panel{flex-basis:90vw}
+  .mini-product-image,.panel-category>div{height:124px}
+  .marketplace-strip>div{flex-basis:84vw}
+  .mobile-bottom-nav a>span:last-child,
+  .mobile-bottom-nav button>span,
+  .mobile-bottom-nav em{font-size:9px}
+}
+
+/* ==========================================================
+   ONEMARKET PUBLIC V5 — MOTION SYSTEM
+   The official monogram is used as-is. Motion is applied to
+   reveal, light and position only; proportions never change.
+   ========================================================== */
+
+.sr-only{
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  padding:0!important;
+  margin:-1px!important;
+  overflow:hidden!important;
+  clip:rect(0,0,0,0)!important;
+  white-space:nowrap!important;
+  border:0!important;
+}
+
+/* Route motion: short enough to keep the marketplace feeling fast. */
+.route-stage{
+  min-height:1px;
+  animation:omPageEnter .34s cubic-bezier(.22,.61,.36,1) both;
+  transform-origin:50% 0;
+}
+
+@keyframes omPageEnter{
+  from{opacity:0;transform:translateY(7px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* Main loading signature: monogram only, no visible loading copy. */
+.om-loader{
+  width:100%;
+  min-height:230px;
+  display:grid;
+  place-items:center;
+  position:relative;
+  isolation:isolate;
+}
+
+.om-loader--fullscreen{
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  min-height:100dvh;
+  background:
+    radial-gradient(circle at 50% 47%,rgba(9,76,233,.055),transparent 28%),
+    #fff;
+}
+
+.om-loader-stage{
+  position:relative;
+  width:132px;
+  height:112px;
+  display:grid;
+  place-items:center;
+}
+
+.om-loader-mark-frame{
+  position:relative;
+  z-index:3;
+  width:108px;
+  aspect-ratio:550/435;
+  overflow:hidden;
+  filter:drop-shadow(0 9px 18px rgba(11,24,53,.08));
+  animation:omMarkFloat 2.15s cubic-bezier(.45,0,.55,1) .82s infinite;
+}
+
+.om-loader-mark{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  clip-path:inset(0 100% 0 0);
+  opacity:0;
+  animation:omMarkReveal .82s cubic-bezier(.65,0,.35,1) forwards;
+}
+
+/* A narrow moving light is masked by the exact monogram silhouette. */
+.om-loader-scan{
+  position:absolute;
+  inset:0;
+  z-index:2;
+  pointer-events:none;
+  opacity:0;
+  background:linear-gradient(
+    105deg,
+    transparent 25%,
+    rgba(255,255,255,0) 38%,
+    rgba(255,255,255,.78) 49%,
+    rgba(105,154,255,.48) 53%,
+    rgba(255,255,255,0) 64%,
+    transparent 76%
+  );
+  transform:translateX(-115%);
+  -webkit-mask-image:url('https://res.cloudinary.com/nks-services/image/upload/v1788106209/one-market-logo.webp');
+  -webkit-mask-repeat:no-repeat;
+  -webkit-mask-position:center;
+  -webkit-mask-size:contain;
+  mask-image:url('https://res.cloudinary.com/nks-services/image/upload/v1788106209/one-market-logo.webp');
+  mask-repeat:no-repeat;
+  mask-position:center;
+  mask-size:contain;
+  animation:omMarkScan 1.75s cubic-bezier(.4,0,.2,1) .56s infinite;
+}
+
+.om-loader-glow{
+  position:absolute;
+  z-index:0;
+  width:72px;
+  height:72px;
+  border-radius:50%;
+  background:rgba(9,76,233,.11);
+  filter:blur(22px);
+  animation:omGlowPulse 1.8s ease-in-out infinite;
+}
+
+.om-loader-orbit{
+  position:absolute;
+  z-index:1;
+  border-radius:50%;
+  pointer-events:none;
+  opacity:.38;
+}
+
+.om-loader-orbit--one{
+  width:124px;
+  height:124px;
+  border:1px solid transparent;
+  border-top-color:rgba(9,76,233,.56);
+  border-right-color:rgba(9,76,233,.12);
+  animation:omOrbit 2.4s linear infinite;
+}
+
+.om-loader-orbit--two{
+  width:94px;
+  height:94px;
+  border:1px solid transparent;
+  border-bottom-color:rgba(11,24,53,.22);
+  border-left-color:rgba(11,24,53,.08);
+  animation:omOrbitReverse 3.1s linear infinite;
+}
+
+.om-loader--small{min-height:88px}
+.om-loader--small .om-loader-stage{width:76px;height:64px}
+.om-loader--small .om-loader-mark-frame{width:58px}
+.om-loader--small .om-loader-orbit--one{width:70px;height:70px}
+.om-loader--small .om-loader-orbit--two{width:54px;height:54px}
+.om-loader--small .om-loader-glow{width:44px;height:44px;filter:blur(15px)}
+
+@keyframes omMarkReveal{
+  0%{clip-path:inset(0 100% 0 0);opacity:0;transform:translateY(3px)}
+  20%{opacity:1}
+  100%{clip-path:inset(0 0 0 0);opacity:1;transform:translateY(0)}
+}
+
+@keyframes omMarkScan{
+  0%,18%{transform:translateX(-115%);opacity:0}
+  27%{opacity:.8}
+  58%{transform:translateX(115%);opacity:.72}
+  66%,100%{transform:translateX(115%);opacity:0}
+}
+
+@keyframes omMarkFloat{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-3px)}
+}
+
+@keyframes omGlowPulse{
+  0%,100%{opacity:.42;transform:scale(.92)}
+  50%{opacity:.78;transform:scale(1.08)}
+}
+
+@keyframes omOrbit{to{transform:rotate(360deg)}}
+@keyframes omOrbitReverse{to{transform:rotate(-360deg)}}
+
+/* Global interaction motion */
+.button,
+.icon-button,
+.send-button,
+.qty-control button,
+.variant-list button,
+.address-card,
+.mobile-bottom-nav a,
+.mobile-bottom-nav button,
+.market-subnav a,
+.market-subnav button{
+  -webkit-tap-highlight-color:transparent;
+}
+
+.button,
+.icon-button,
+.send-button,
+.qty-control button,
+.variant-list button{
+  transition:
+    transform .16s cubic-bezier(.2,.8,.2,1),
+    background-color .2s ease,
+    border-color .2s ease,
+    color .2s ease,
+    box-shadow .2s ease;
+}
+
+.button:active,
+.icon-button:active,
+.send-button:active,
+.qty-control button:active,
+.variant-list button:active{
+  transform:scale(.97);
+}
+
+/* Cards enter with a restrained retail rhythm. */
+.product-grid>.product-card,
+.store-grid>.store-card,
+.store-directory>.store-directory-card,
+.marketplace-panels>.market-panel{
+  animation:omCardIn .42s cubic-bezier(.22,.61,.36,1) both;
+}
+
+.product-grid>.product-card:nth-child(2),
+.store-grid>.store-card:nth-child(2),
+.marketplace-panels>.market-panel:nth-child(2){animation-delay:.035s}
+.product-grid>.product-card:nth-child(3),
+.store-grid>.store-card:nth-child(3),
+.marketplace-panels>.market-panel:nth-child(3){animation-delay:.07s}
+.product-grid>.product-card:nth-child(4),
+.store-grid>.store-card:nth-child(4),
+.marketplace-panels>.market-panel:nth-child(4){animation-delay:.105s}

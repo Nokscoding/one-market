@@ -1,0 +1,173 @@
+
+
+/* Auth keeps a white logo zone so the original transparent logo is never altered. */
+.auth-brand .brand-logo{
+  background:#fff;
+  border-radius:8px;
+  padding:6px;
+}
+
+@media(max-width:760px){
+  .market-topbar-inner{
+    height:58px;
+    width:calc(100% - 12px);
+    gap:7px;
+  }
+  .market-header .brand-logo{
+    width:76px;
+    height:56px;
+    padding:0;
+  }
+  .market-menu-button.mobile-only{
+    color:var(--navy);
+    width:34px;
+    height:38px;
+    padding:4px;
+  }
+  .market-account{
+    color:var(--navy);
+  }
+  .market-cart{
+    color:var(--navy);
+  }
+  .market-cart>strong{
+    color:var(--navy);
+  }
+  .market-cart-icon b{
+    border-color:#fff;
+  }
+  .mobile-market-search{
+    margin:0 8px 8px;
+    height:42px;
+    border:1px solid #8a8f98;
+    border-radius:6px;
+  }
+  .mobile-market-search:focus-within{
+    outline:2px solid var(--blue);
+    outline-offset:0;
+  }
+  .market-subnav{
+    height:34px;
+  }
+  .market-mobile-menu{
+    top:142px;
+  }
+
+  /* Mobile homepage: compact banner then full-width retail blocks. */
+  .market-hero-wrap{
+    background:#e7ebf2;
+  }
+  .market-hero{
+    width:100%;
+    padding:8px 10px 10px;
+    gap:0;
+  }
+  .market-hero-copy{
+    min-height:178px;
+    border-radius:6px;
+    padding:20px 17px;
+  }
+  .market-hero-copy>span{
+    margin-bottom:5px;
+    font-size:10px;
+  }
+  .market-hero-copy h1{
+    font-size:27px;
+    line-height:1.07;
+    margin-bottom:8px;
+  }
+  .market-hero-copy p{
+    font-size:12px;
+    line-height:1.42;
+    margin-bottom:12px;
+  }
+  .market-hero-copy>a{
+    padding:8px 10px;
+    font-size:12px;
+  }
+
+  .marketplace-panels{
+    width:100%;
+    display:grid;
+    grid-template-columns:1fr;
+    overflow:visible;
+    gap:8px;
+    padding:8px 8px 0;
+    margin-top:0;
+  }
+  .market-panel{
+    width:100%;
+    min-width:0;
+    padding:13px;
+    scroll-snap-align:none;
+  }
+  .market-panel-title{
+    margin-bottom:10px;
+  }
+  .market-panel-title h2{
+    font-size:19px;
+  }
+  .market-mini-grid{
+    gap:8px;
+  }
+  .mini-product-image,
+  .panel-category>div{
+    height:132px;
+  }
+  .mini-product>span,
+  .panel-category strong{
+    font-size:12px;
+  }
+  .panel-link{
+    margin-top:11px;
+  }
+
+  .marketplace-strip{
+    width:calc(100% - 16px);
+    margin:8px auto 0;
+  }
+  .market-product-section,
+  .market-store-section{
+    margin-top:8px;
+    padding:13px 9px;
+  }
+  .market-section-heading{
+    margin-bottom:11px;
+  }
+  .market-section-heading h2{
+    font-size:20px;
+  }
+  .product-grid{
+    gap:16px 7px;
+  }
+  .product-media{
+    border-color:#e1e3e6;
+  }
+  .product-name{
+    line-height:1.25;
+  }
+}
+
+@media(max-width:380px){
+  .market-header .brand-logo{
+    width:69px;
+    height:52px;
+  }
+  .market-topbar-inner{
+    gap:5px;
+  }
+  .mini-product-image,
+  .panel-category>div{
+    height:118px;
+  }
+}
+
+/* ==========================================================
+   ONEMARKET PUBLIC V4 — fresh mobile marketplace UI
+   Mobile-first navigation inspired by proven marketplace UX:
+   prominent search, horizontal discovery and fixed bottom nav.
+   ========================================================== */
+.mobile-search-row,
+.mobile-location-button,
+.mobile-bottom-nav,
+.mobile-menu-head{display:none}

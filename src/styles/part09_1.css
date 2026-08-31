@@ -1,0 +1,131 @@
+@media(max-width:760px){
+  :root{--mobile-nav-h:70px}
+  html{scroll-padding-top:148px}
+  body{padding-bottom:calc(var(--mobile-nav-h) + env(safe-area-inset-bottom));background:#f3f4f6}
+  .app{padding-bottom:0}
+
+  /* Fresh mobile header */
+  .market-header{
+    position:sticky;
+    top:0;
+    z-index:90;
+    background:#dbeaff;
+    box-shadow:0 1px 0 rgba(11,24,53,.08);
+  }
+  .market-topbar{
+    background:linear-gradient(180deg,#d4e7ff 0%,#b9d6ff 100%);
+    border:0;
+    color:var(--navy);
+    padding-top:max(4px,env(safe-area-inset-top));
+  }
+  .market-topbar-inner{
+    height:55px;
+    width:calc(100% - 24px);
+    margin:0 auto;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .market-header .brand-logo{
+    width:92px;
+    height:50px;
+    flex:0 0 auto;
+    padding:0;
+    background:transparent;
+    border:0;
+    border-radius:0;
+    overflow:visible;
+  }
+  .market-header .brand-logo img{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    filter:none;
+  }
+  .market-actions,
+  .desktop-location,
+  .market-search{display:none!important}
+
+  .mobile-search-row{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    padding:4px 12px 10px;
+  }
+  .mobile-market-search{
+    display:flex;
+    align-items:center;
+    flex:1;
+    min-width:0;
+    height:50px;
+    margin:0;
+    padding:0 5px 0 13px;
+    border:1px solid rgba(11,24,53,.28);
+    border-radius:25px!important;
+    background:#fff;
+    overflow:hidden;
+    box-shadow:0 1px 2px rgba(11,24,53,.08);
+  }
+  .mobile-market-search:focus-within{
+    outline:2px solid rgba(9,76,233,.5);
+    outline-offset:1px;
+    border-color:transparent;
+  }
+  .mobile-search-leading{display:block;color:#111;flex:0 0 auto}
+  .mobile-market-search input{
+    flex:1;
+    min-width:0;
+    height:100%;
+    border:0!important;
+    outline:0;
+    padding:0 10px!important;
+    background:#fff!important;
+    color:#171717;
+    font-size:16px;
+  }
+  .mobile-market-search input::placeholder{color:#5d6168;opacity:1}
+  .mobile-market-search button{
+    width:42px;
+    height:42px;
+    flex:0 0 42px;
+    border:0;
+    border-radius:50%!important;
+    background:#f1f5fb;
+    color:var(--navy);
+    display:grid;
+    place-items:center;
+  }
+  .mobile-location-button{
+    width:50px;
+    height:50px;
+    flex:0 0 50px;
+    display:grid;
+    place-items:center;
+    border-radius:50%;
+    background:#fff;
+    color:var(--navy);
+    border:1px solid rgba(11,24,53,.18);
+    box-shadow:0 1px 2px rgba(11,24,53,.08);
+  }
+
+  /* Horizontal discovery chips */
+  .market-subnav{
+    height:52px;
+    background:linear-gradient(180deg,#b9d6ff 0%,#a7caff 100%);
+    border:0;
+    color:var(--navy);
+  }
+  .market-subnav-inner{
+    width:100%;
+    height:100%;
+    display:flex;
+    align-items:center;
+    gap:9px;
+    overflow-x:auto;
+    padding:5px 12px 9px;
+    scrollbar-width:none;
+  }
+  .market-subnav-inner::-webkit-scrollbar{display:none}
+  .market-subnav .all-link,
+  .subnav-message{display:none}}
