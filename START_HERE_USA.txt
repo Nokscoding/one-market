@@ -2,12 +2,6 @@ ONE MARKET V6 — START HERE — RESPONSABLE USA
 
 Bienvenue sur le dépôt officiel One Market, un produit NKS Services.
 
-TON RÔLE
-- Tu es Super Admin One Market.
-- Tu disposes des mêmes pouvoirs opérationnels de gestion que le Super Admin / Owner dans l'application One Market.
-- Ta responsabilité principale et quotidienne est One Market USA : vendeurs US, catalogue US, opérations, livraison, support, qualité, croissance et suivi du marché américain.
-- Tu peux intervenir sur les autres marchés si l'organisation One Market l'exige.
-- NKS Services conserve la propriété du produit, de la marque, du dépôt principal, des comptes racines et des décisions de propriété/transfert.
 
 CE QUI EXISTE DANS LA V6
 Cette V6 implémente principalement l'expérience Client / Utilisateur : authentification, catalogue, boutiques, panier, checkout, commandes, chat et compte utilisateur, avec Supabase.
