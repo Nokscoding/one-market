@@ -1,0 +1,18 @@
+GITHUB — CRÉATION DU DÉPÔT
+==========================
+
+Nom recommandé : one-market
+Visibilité recommandée : PRIVATE
+Owner recommandé : compte/organisation GitHub contrôlé par NKS Services.
+
+Une fois le dépôt créé :
+
+  git init
+  git add .
+  git commit -m "Initial One Market V6 handoff"
+  git branch -M main
+  git remote add origin <URL_DU_REPO>
+  git push -u origin main
+
+Pour le responsable USA : l'ajouter comme collaborateur avec le minimum de droits nécessaire.
+Ne pas lui transmettre de secrets par README, chat GitHub ou commit.

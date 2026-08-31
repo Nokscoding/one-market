@@ -1,0 +1,26 @@
+ONE MARKET V6 — STRUCTURE RAPIDE DU CODE
+=========================================
+
+src/App.jsx                  Routes globales
+src/main.jsx                 Démarrage React
+src/context/AuthContext.jsx  Session + profil
+src/context/CartContext.jsx  Panier persistant
+src/lib/supabase.js          Connexion Supabase
+src/lib/format.js            Prix/dates/statuts
+src/components/Header.jsx    Header + nav mobile
+src/components/Footer.jsx    Footer
+src/components/ProductCard.jsx Carte produit
+src/pages/Home.jsx           Accueil
+src/pages/Catalog.jsx        Catalogue
+src/pages/Stores.jsx         Boutiques
+src/pages/StorePage.jsx      Une boutique
+src/pages/ProductPage.jsx    Produit
+src/pages/AuthPage.jsx       Authentification
+src/pages/CartPage.jsx       Panier
+src/pages/CheckoutPage.jsx   Adresse + checkout
+src/pages/OrdersPage.jsx     Liste commandes
+src/pages/OrderPage.jsx      Détail commande
+src/pages/ChatPage.jsx       Chat temps réel
+src/pages/AccountPage.jsx    Profil utilisateur
+
+DOCUMENTATION DÉTAILLÉE : dossier docs/
