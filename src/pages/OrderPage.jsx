@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import EmptyState from '../components/EmptyState'
 import Loader from '../components/Loader'
+import ReportProblem from '../components/ReportProblem'
 import SmartImage from '../components/SmartImage'
 import StoreTrustBadge from '../components/StoreTrustBadge'
 import { cdf, deliveryOption } from '../lib/delivery'
@@ -56,6 +57,8 @@ export default function OrderPage() {
 
   const delivery = deliveryOption(order.delivery_method)
   const paymentLabel = order.payment_status === 'cash_received' ? 'Paiement reçu' : order.payment_status === 'cancelled' ? 'Paiement annulé' : 'À payer au livreur'
+  const reportSellerOrders = subs.map(sub => ({ ...sub, store: stores[sub.store_id] })).filter(sub => sub.store)
+  const reportItems = Object.values(items).flat()
 
   return (
     <main className="section-shell page-space order-detail-final">
@@ -66,6 +69,7 @@ export default function OrderPage() {
 
       <div className={`order-delivery-summary ${delivery.code === 'express' ? 'is-express' : ''}`}><span>{delivery.code === 'express' ? <Zap size={20}/> : <Truck size={20}/>}</span><div><strong>{delivery.label}</strong><small>{delivery.description} · {cdf(order.delivery_fee_cdf ?? delivery.feeCdf)}</small></div><em>{order.logistics_status === 'delivered' ? 'Livrée' : order.logistics_status === 'out_for_delivery' ? 'En route' : 'En cours'}</em></div>
       <div className="order-payment-summary"><Banknote size={19}/><div><strong>Paiement à la livraison</strong><span>{paymentLabel}. Le règlement se fait directement auprès du livreur à la réception.</span></div></div>
+      <div className="order-report-row"><ReportProblem source="order_detail" orderId={order.id} orderNumber={order.order_number} sellerOrders={reportSellerOrders} orderItems={reportItems}/></div>
 
       <div className="seller-order-list">{subs.map(sub => {
         const store = stores[sub.store_id]
