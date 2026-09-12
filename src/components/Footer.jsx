@@ -16,6 +16,7 @@ export default function Footer() {
           <Link to="/catalog?view=new">Nouveautés</Link>
           <Link to="/catalog?view=categories">Catégories</Link>
           <Link to="/stores">Boutiques</Link>
+          <Link to="/seller">Vendre sur One Market</Link>
         </div>
 
         <div className="om-footer-column">
