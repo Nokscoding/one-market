@@ -10,19 +10,13 @@ import CartPage from './pages/CartPage'
 import Catalog from './pages/Catalog'
 import ChatPage from './pages/ChatPage'
 import CheckoutPage from './pages/CheckoutPage'
+import FavoritesPage from './pages/FavoritesPage'
 import Home from './pages/Home'
 import OrderPage from './pages/OrderPage'
 import OrdersPage from './pages/OrdersPage'
 import ProductPage from './pages/ProductPage'
 import StorePage from './pages/StorePage'
 import Stores from './pages/Stores'
-
-/**
- * Routeur principal One Market V6.
- * Cette V6 expose principalement l'espace Client/Public.
- * Les futurs dashboards admin/vendeur/livreur devront être ajoutés comme espaces séparés
- * avec contrôle de rôle côté frontend ET RLS côté Supabase.
- */
 
 function Private({ children }) {
   return <ProtectedRoute>{children}</ProtectedRoute>
@@ -35,9 +29,6 @@ export default function App() {
   const [introLeaving, setIntroLeaving] = useState(false)
 
   useEffect(() => {
-    // Intro = animation d'entrée unique à chaque lancement complet du site.
-    // Elle ne dépend volontairement PAS du réseau ni de Supabase : elle ne peut
-    // donc jamais rester bloquée comme un loader.
     const leaveTimer = window.setTimeout(() => setIntroLeaving(true), 1600)
     const removeTimer = window.setTimeout(() => setIntroVisible(false), 2260)
 
@@ -75,6 +66,7 @@ export default function App() {
           <Route path="/store/:slug" element={<StorePage />} />
           <Route path="/product/:id" element={<ProductPage />} />
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/favorites" element={<Private><FavoritesPage /></Private>} />
           <Route path="/cart" element={<Private><CartPage /></Private>} />
           <Route path="/checkout" element={<Private><CheckoutPage /></Private>} />
           <Route path="/orders" element={<Private><OrdersPage /></Private>} />
