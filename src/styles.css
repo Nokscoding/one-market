@@ -26,6 +26,7 @@
 @import './styles/trust-notifications.css';
 @import './styles/legal-mobile.css';
 @import './styles/account-legal-gate.css';
+@import './styles/reporting.css';
 
 .seller-return-site {
   position: fixed;
