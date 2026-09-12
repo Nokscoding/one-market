@@ -60,7 +60,8 @@ export default function AuthPage() {
         navigate(location.state?.from || '/account', { replace: true })
       }
     } catch (submitError) {
-      setError(submitError?.message || 'Une erreur est survenue.')
+      const raw = submitError?.message || 'Une erreur est survenue.'
+      setError(raw.includes('Database error saving new user') ? 'Impossible de finaliser la création du compte. Réessaie dans un instant.' : raw)
     } finally {
       setLoading(false)
     }
@@ -81,7 +82,7 @@ export default function AuthPage() {
           {mode === 'signup' && <label>Nom complet<input required value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} placeholder="Votre nom"/></label>}
           <label>Email<input required type="email" autoComplete="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="nom@exemple.com"/></label>
           <label>Mot de passe<div className="password-field"><input required minLength={mode === 'signup' ? 8 : 6} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} type={show ? 'text' : 'password'} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="••••••••"/><button type="button" aria-label={show ? 'Masquer le mot de passe' : 'Afficher le mot de passe'} onClick={() => setShow(value => !value)}>{show ? <EyeOff size={18}/> : <Eye size={18}/>}</button></div></label>
-          {mode === 'signup' && <label className="legal-consent-check"><input type="checkbox" checked={legalConsent} onChange={e => setLegalConsent(e.target.checked)}/><span><ShieldCheck size={17}/> J’accepte les <Link to="/legal/conditions" target="_blank">Conditions d’utilisation</Link> et j’ai lu la <Link to="/legal/confidentialite" target="_blank">Politique de confidentialité</Link>.</span></label>}
+          {mode === 'signup' && <label className="legal-consent-check"><input required type="checkbox" checked={legalConsent} onChange={e => setLegalConsent(e.target.checked)}/><span><ShieldCheck size={17}/> J’accepte les <Link to="/legal/conditions" target="_blank">Conditions d’utilisation</Link> et j’ai lu la <Link to="/legal/confidentialite" target="_blank">Politique de confidentialité</Link>.</span></label>}
           {error && <div className="alert error">{error}</div>}{message && <div className="alert success">{message}</div>}
           <button className="button primary full" disabled={loading || (mode === 'signup' && !legalConsent)}>{loading ? 'Chargement…' : mode === 'login' ? 'Se connecter' : 'Créer mon compte'}</button>
         </form>
