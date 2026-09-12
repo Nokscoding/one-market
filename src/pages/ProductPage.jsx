@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Minus, Plus, ShoppingBag, Store, Zap } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Minus, Plus, ShoppingBag, Store, Truck, Zap } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import Loader from '../components/Loader'
@@ -9,6 +9,7 @@ import RatingStars from '../components/RatingStars'
 import SmartImage from '../components/SmartImage'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
+import { cdf, DELIVERY_OPTIONS } from '../lib/delivery'
 import { money } from '../lib/format'
 import { supabase } from '../lib/supabase'
 
@@ -76,55 +77,28 @@ export default function ProductPage() {
 
   function validatePurchase() {
     setError('')
-    if (product?.has_variants && !variantId) {
-      setError('Choisis une variante.')
-      return false
-    }
-    if (stock <= 0) {
-      setError('Ce produit est actuellement en rupture de stock.')
-      return false
-    }
+    if (product?.has_variants && !variantId) { setError('Choisis une variante.'); return false }
+    if (stock <= 0) { setError('Ce produit est actuellement en rupture de stock.'); return false }
     return true
   }
 
   async function add() {
     if (!user) return navigate('/auth', { state: { from: `/product/${id}` } })
     if (!validatePurchase()) return
-
     setAdding(true)
     try {
-      const snapshot = {
-        product,
-        variant: selectedVariant || null,
-        store,
-        image: currentImage,
-        unitPrice: Number(price || 0),
-        availableStock: Number(stock || 0),
-      }
-
+      const snapshot = { product, variant: selectedVariant || null, store, image: currentImage, unitPrice: Number(price || 0), availableStock: Number(stock || 0) }
       await addItem(product.id, variantId || null, qty, snapshot)
       const query = new URLSearchParams({ added: '1', product: product.id, qty: String(qty) })
       if (variantId) query.set('variant', variantId)
-
-      navigate(`/cart?${query.toString()}`, {
-        state: {
-          addedProduct: {
-            ...snapshot,
-            quantity: qty,
-          },
-        },
-      })
-    } catch (e) {
-      setError(e.message || 'Impossible d’ajouter au panier.')
-    } finally {
-      setAdding(false)
-    }
+      navigate(`/cart?${query.toString()}`, { state: { addedProduct: { ...snapshot, quantity: qty } } })
+    } catch (e) { setError(e.message || 'Impossible d’ajouter au panier.') }
+    finally { setAdding(false) }
   }
 
   function buyNow() {
     if (!user) return navigate('/auth', { state: { from: `/product/${id}` } })
     if (!validatePurchase()) return
-
     const query = new URLSearchParams({ mode: 'buy-now', product: product.id, qty: String(qty) })
     if (variantId) query.set('variant', variantId)
     navigate(`/checkout?${query.toString()}`)
@@ -140,31 +114,30 @@ export default function ProductPage() {
       <div className="product-page">
         <section className="product-gallery">
           <div className="gallery-main">
-            <SmartImage src={currentImage} alt={product.name} fallback="OM" className="product-main-smart-image" loading="eager" fit="contain" widthHint={900} />
-            {imageUrls.length > 1 && <>
-              <button className="gallery-nav gallery-nav-prev" onClick={() => changeImage(-1)} aria-label="Image précédente"><ChevronLeft size={22} /></button>
-              <button className="gallery-nav gallery-nav-next" onClick={() => changeImage(1)} aria-label="Image suivante"><ChevronRight size={22} /></button>
-              <span className="gallery-image-count">{selectedImage + 1} / {imageUrls.length}</span>
-            </>}
+            <SmartImage src={currentImage} alt={product.name} fallback="OM" className="product-main-smart-image" loading="eager" fit="contain" width={900}/>
+            {imageUrls.length > 1 && <><button className="gallery-nav gallery-nav-prev" onClick={() => changeImage(-1)} aria-label="Image précédente"><ChevronLeft size={22}/></button><button className="gallery-nav gallery-nav-next" onClick={() => changeImage(1)} aria-label="Image suivante"><ChevronRight size={22}/></button><span className="gallery-image-count">{selectedImage + 1} / {imageUrls.length}</span></>}
           </div>
-          {imageUrls.length > 1 && <div className="thumbs product-thumbs">{imageUrls.map((src, index) => <button key={`${src}-${index}`} className={selectedImage === index ? 'active' : ''} onClick={() => setSelectedImage(index)} aria-label={`Afficher l'image ${index + 1}`}><SmartImage src={src} alt="" fallback="OM" fit="cover" widthHint={140} /></button>)}</div>}
+          {imageUrls.length > 1 && <div className="thumbs product-thumbs">{imageUrls.map((src, index) => <button key={`${src}-${index}`} className={selectedImage === index ? 'active' : ''} onClick={() => setSelectedImage(index)} aria-label={`Afficher l'image ${index + 1}`}><SmartImage src={src} alt="" fallback="OM" fit="cover" width={140}/></button>)}</div>}
         </section>
 
         <section className="product-detail">
-          <div className="product-detail-topline"><span className="eyebrow">Boutique RDC</span><FavoriteButton productId={product.id} className="favorite-button--detail" showLabel /></div>
+          <div className="product-detail-topline"><span className="eyebrow">Boutique RDC</span><FavoriteButton productId={product.id} className="favorite-button--detail" showLabel/></div>
           <h1>{product.name}</h1>
-          <Link to={`/store/${store.slug}`} className="seller-link"><Store size={17} /> {store.name}</Link>
-          <div className="product-detail-rating"><RatingStars value={rating} count={reviewCount} /><a href="#reviews">{reviewCount ? 'Lire les avis' : 'Soyez le premier à donner un avis'}</a></div>
+          <Link to={`/store/${store.slug}`} className="seller-link"><Store size={17}/> {store.name}</Link>
+          <div className="product-detail-rating"><RatingStars value={rating} count={reviewCount}/><a href="#reviews">{reviewCount ? 'Lire les avis' : 'Soyez le premier à donner un avis'}</a></div>
           <div className="detail-price">{money(price, product.currency)}</div>
           <p className="detail-description">{product.description || 'Aucune description supplémentaire pour ce produit.'}</p>
           <div className="product-detail-trust"><div><strong>{stockLabel}</strong><span>Stock affiché en temps réel</span></div><div><strong>Paiement à la livraison</strong><span>Vous payez à la réception de votre commande</span></div><div><strong>Boutique One Market</strong><span>Produit vendu par {store.name}</span></div></div>
+
+          <div className="product-delivery-preview"><div className="product-delivery-preview-head"><Truck size={19}/><div><strong>Livraison One Market</strong><span>Le choix final se fait dans le panier ou au checkout.</span></div></div><div>{DELIVERY_OPTIONS.map(option => <span key={option.code}><strong>{option.label}</strong><b>{cdf(option.feeCdf)}</b><small>{option.description}</small></span>)}</div></div>
+
           {product.has_variants && <div className="field-block"><label>Variante</label><div className="variant-list">{variants.map(v => <button key={v.id} className={variantId === v.id ? 'active' : ''} onClick={() => setVariantId(v.id)}>{Object.values(v.attributes || {}).join(' · ') || 'Option'}</button>)}</div></div>}
-          <div className="purchase-row purchase-row--marketplace"><div className="qty-control"><button onClick={() => setQty(q => Math.max(1, q - 1))}><Minus size={16} /></button><span>{qty}</span><button onClick={() => setQty(q => Math.min(Math.max(stock, 1), q + 1))}><Plus size={16} /></button></div><div className="purchase-main-actions"><button className="button primary grow" disabled={adding || stock <= 0} onClick={add}><ShoppingBag size={18} /> {stock <= 0 ? 'Rupture de stock' : adding ? 'Ajout…' : 'Ajouter au panier'}</button><button className="button buy-now-button grow" disabled={adding || stock <= 0} onClick={buyNow}><Zap size={18}/> Acheter maintenant</button></div></div>
+          <div className="purchase-row purchase-row--marketplace"><div className="qty-control"><button onClick={() => setQty(q => Math.max(1, q - 1))}><Minus size={16}/></button><span>{qty}</span><button onClick={() => setQty(q => Math.min(Math.max(stock, 1), q + 1))}><Plus size={16}/></button></div><div className="purchase-main-actions"><button className="button primary grow" disabled={adding || stock <= 0} onClick={add}><ShoppingBag size={18}/> {stock <= 0 ? 'Rupture de stock' : adding ? 'Ajout…' : 'Ajouter au panier'}</button><button className="button buy-now-button grow" disabled={adding || stock <= 0} onClick={buyNow}><Zap size={18}/> Acheter maintenant</button></div></div>
           {error && <p className="form-error">{error}</p>}
-          <div className="purchase-note"><strong>Paiement à la livraison</strong><span>Pour la V1 One Market en RDC, le paiement est effectué au moment de la livraison. D’autres moyens de paiement seront ajoutés ensuite.</span></div>
+          <div className="purchase-note"><strong>Paiement à la livraison</strong><span>Les produits restent facturés en USD et les frais de livraison en FC, sans conversion arbitraire.</span></div>
         </section>
       </div>
-      <ProductReviews product={product} />
+      <ProductReviews product={product}/>
     </main>
   )
 }
