@@ -9,6 +9,26 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      (function () {
+        function showStartupError(message) {
+          var root = document.getElementById('root')
+          if (!root || root.childNodes.length) return
+          root.innerHTML = '<main style="min-height:100vh;background:#07172b;color:#fff;display:grid;place-items:center;padding:24px;font-family:system-ui,-apple-system,Segoe UI,sans-serif"><section style="width:min(760px,100%);background:#fff;color:#172033;border-radius:18px;padding:28px"><div style="font-size:12px;font-weight:800;letter-spacing:.14em;color:#1769e0">ONE MARKET · ERREUR DE DÉMARRAGE</div><h1>Le site a rencontré une erreur.</h1><p style="color:#667085">Envoie une photo de ce message dans le chat.</p><pre style="white-space:pre-wrap;word-break:break-word;background:#f3f5f7;border-radius:12px;padding:16px">'+String(message).replace(/</g,'&lt;')+'</pre></section></main>'
+        }
+        window.addEventListener('error', function (event) {
+          showStartupError(event.error && event.error.message ? event.error.message : event.message || 'Erreur JavaScript inconnue')
+        })
+        window.addEventListener('unhandledrejection', function (event) {
+          var reason = event.reason
+          showStartupError(reason && reason.message ? reason.message : reason || 'Promesse rejetée')
+        })
+        setTimeout(function () {
+          var root = document.getElementById('root')
+          if (root && !root.childNodes.length) showStartupError('React n’a pas pu démarrer. Ouvre la console du navigateur pour plus de détails.')
+        }, 1800)
+      })()
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
