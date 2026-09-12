@@ -23,3 +23,40 @@
 @import './styles/seller.css';
 @import './styles/seller-application.css';
 @import './styles/final-polish.css';
+
+.seller-return-site {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 12000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 999px;
+  background: #0b1b3b;
+  color: #fff;
+  box-shadow: 0 12px 30px rgba(7, 23, 43, .2);
+  font-size: .82rem;
+  font-weight: 800;
+  text-decoration: none;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.seller-return-site:hover {
+  transform: translateY(-2px);
+  background: #1357e6;
+  box-shadow: 0 16px 34px rgba(19, 87, 230, .24);
+}
+
+@media (max-width: 680px) {
+  .seller-return-site {
+    right: 12px;
+    bottom: 12px;
+    min-height: 42px;
+    padding: 0 14px;
+    font-size: .76rem;
+  }
+}
