@@ -1,24 +1,21 @@
 import { ChevronLeft, ChevronRight, Minus, Plus, ShoppingBag, Store } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import Loader from '../components/Loader'
 import EmptyState from '../components/EmptyState'
+import FavoriteButton from '../components/FavoriteButton'
+import ProductReviews from '../components/ProductReviews'
+import RatingStars from '../components/RatingStars'
 import SmartImage from '../components/SmartImage'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import { money } from '../lib/format'
 import { supabase } from '../lib/supabase'
 
-/**
- * ROUTE: /product/:id
- * PUBLIC: lecture; connexion requise pour ajouter au panier.
- * BUT: fiche produit, galerie, variantes, stock et ajout panier.
- * SUPABASE: products, stores, product_images, product_variants.
- */
-
 export default function ProductPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
   const { addItem } = useCart()
   const [product, setProduct] = useState(null)
@@ -42,7 +39,7 @@ export default function ProductPage() {
       setProduct(p || null)
       if (p) {
         const [{ data: s }, { data: imgs }, { data: vars }] = await Promise.all([
-          supabase.from('stores').select('*').eq('id', p.store_id).maybeSingle(),
+          supabase.from('stores').select('*').eq('id', p.store_id).eq('country_code', 'CD').eq('status', 'active').maybeSingle(),
           supabase.from('product_images').select('*').eq('product_id', p.id).order('sort_order'),
           supabase.from('product_variants').select('*').eq('product_id', p.id).eq('is_active', true).order('created_at'),
         ])
@@ -58,11 +55,19 @@ export default function ProductPage() {
     return () => { active = false }
   }, [id])
 
+  useEffect(() => {
+    if (loading || location.hash !== '#reviews') return
+    const timer = window.setTimeout(() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80)
+    return () => window.clearTimeout(timer)
+  }, [loading, location.hash])
+
   const selectedVariant = useMemo(() => variants.find(v => v.id === variantId), [variants, variantId])
   const price = selectedVariant?.price ?? product?.price
   const stock = product?.has_variants ? selectedVariant?.stock_qty ?? 0 : product?.stock_qty ?? 0
   const imageUrls = useMemo(() => images.map(img => img.secure_url).filter(Boolean), [images])
   const currentImage = imageUrls[selectedImage] || ''
+  const rating = Number(product?.rating_avg) || 0
+  const reviewCount = Number(product?.rating_count) || 0
 
   function changeImage(direction) {
     if (imageUrls.length < 2) return
@@ -80,33 +85,55 @@ export default function ProductPage() {
   }
 
   if (loading) return <Loader fullscreen />
-  if (!product) return <main className="section-shell page-space"><EmptyState title="Produit introuvable" /></main>
+  if (!product || !store) return <main className="section-shell page-space"><EmptyState title="Produit introuvable" /></main>
+
+  const stockLabel = stock <= 0 ? 'Rupture de stock' : stock <= 5 ? `Plus que ${stock} disponible${stock > 1 ? 's' : ''}` : 'Disponible en stock'
 
   return (
-    <main className="section-shell product-page">
-      <section className="product-gallery">
-        <div className="gallery-main">
-          <SmartImage src={currentImage} alt={product.name} fallback="OM" className="product-main-smart-image" loading="eager" fit="contain" />
-          {imageUrls.length > 1 && <>
-            <button className="gallery-nav gallery-nav-prev" onClick={() => changeImage(-1)} aria-label="Image précédente"><ChevronLeft size={22} /></button>
-            <button className="gallery-nav gallery-nav-next" onClick={() => changeImage(1)} aria-label="Image suivante"><ChevronRight size={22} /></button>
-            <span className="gallery-image-count">{selectedImage + 1} / {imageUrls.length}</span>
-          </>}
-        </div>
-        {imageUrls.length > 1 && <div className="thumbs product-thumbs">{imageUrls.map((src, index) => <button key={`${src}-${index}`} className={selectedImage === index ? 'active' : ''} onClick={() => setSelectedImage(index)} aria-label={`Afficher l'image ${index + 1}`}><SmartImage src={src} alt="" fallback="OM" fit="cover" /></button>)}</div>}
-      </section>
+    <main className="section-shell product-page-shell">
+      <div className="product-page">
+        <section className="product-gallery">
+          <div className="gallery-main">
+            <SmartImage src={currentImage} alt={product.name} fallback="OM" className="product-main-smart-image" loading="eager" fit="contain" />
+            {imageUrls.length > 1 && <>
+              <button className="gallery-nav gallery-nav-prev" onClick={() => changeImage(-1)} aria-label="Image précédente"><ChevronLeft size={22} /></button>
+              <button className="gallery-nav gallery-nav-next" onClick={() => changeImage(1)} aria-label="Image suivante"><ChevronRight size={22} /></button>
+              <span className="gallery-image-count">{selectedImage + 1} / {imageUrls.length}</span>
+            </>}
+          </div>
+          {imageUrls.length > 1 && <div className="thumbs product-thumbs">{imageUrls.map((src, index) => <button key={`${src}-${index}`} className={selectedImage === index ? 'active' : ''} onClick={() => setSelectedImage(index)} aria-label={`Afficher l'image ${index + 1}`}><SmartImage src={src} alt="" fallback="OM" fit="cover" /></button>)}</div>}
+        </section>
 
-      <section className="product-detail">
-        <span className="eyebrow">Boutique RDC</span>
-        <h1>{product.name}</h1>
-        {store && <Link to={`/store/${store.slug}`} className="seller-link"><Store size={17} /> {store.name}</Link>}
-        <div className="detail-price">{money(price, product.currency)}</div>
-        <p className="detail-description">{product.description || 'Aucune description supplémentaire pour ce produit.'}</p>
-        {product.has_variants && <div className="field-block"><label>Variante</label><div className="variant-list">{variants.map(v => <button key={v.id} className={variantId === v.id ? 'active' : ''} onClick={() => setVariantId(v.id)}>{Object.values(v.attributes || {}).join(' · ') || 'Option'}</button>)}</div></div>}
-        <div className="purchase-row"><div className="qty-control"><button onClick={() => setQty(q => Math.max(1, q - 1))}><Minus size={16} /></button><span>{qty}</span><button onClick={() => setQty(q => Math.min(Math.max(stock, 1), q + 1))}><Plus size={16} /></button></div><button className="button primary grow" disabled={adding || stock <= 0} onClick={add}><ShoppingBag size={18} /> {stock <= 0 ? 'Rupture de stock' : adding ? 'Ajout…' : 'Ajouter au panier'}</button></div>
-        {error && <p className="form-error">{error}</p>}
-        <div className="purchase-note"><strong>Paiement à la livraison</strong><span>Pour la V1 One Market en RDC, le paiement est effectué au moment de la livraison.</span></div>
-      </section>
+        <section className="product-detail">
+          <div className="product-detail-topline">
+            <span className="eyebrow">Boutique RDC</span>
+            <FavoriteButton productId={product.id} className="favorite-button--detail" showLabel />
+          </div>
+          <h1>{product.name}</h1>
+          {store && <Link to={`/store/${store.slug}`} className="seller-link"><Store size={17} /> {store.name}</Link>}
+
+          <div className="product-detail-rating">
+            <RatingStars value={rating} count={reviewCount} />
+            <a href="#reviews">{reviewCount ? 'Lire les avis' : 'Soyez le premier à donner un avis'}</a>
+          </div>
+
+          <div className="detail-price">{money(price, product.currency)}</div>
+          <p className="detail-description">{product.description || 'Aucune description supplémentaire pour ce produit.'}</p>
+
+          <div className="product-detail-trust">
+            <div><strong>{stockLabel}</strong><span>Stock affiché en temps réel</span></div>
+            <div><strong>Paiement à la livraison</strong><span>Vous payez à la réception de votre commande</span></div>
+            <div><strong>Boutique One Market</strong><span>Produit vendu par {store.name}</span></div>
+          </div>
+
+          {product.has_variants && <div className="field-block"><label>Variante</label><div className="variant-list">{variants.map(v => <button key={v.id} className={variantId === v.id ? 'active' : ''} onClick={() => setVariantId(v.id)}>{Object.values(v.attributes || {}).join(' · ') || 'Option'}</button>)}</div></div>}
+          <div className="purchase-row"><div className="qty-control"><button onClick={() => setQty(q => Math.max(1, q - 1))}><Minus size={16} /></button><span>{qty}</span><button onClick={() => setQty(q => Math.min(Math.max(stock, 1), q + 1))}><Plus size={16} /></button></div><button className="button primary grow" disabled={adding || stock <= 0} onClick={add}><ShoppingBag size={18} /> {stock <= 0 ? 'Rupture de stock' : adding ? 'Ajout…' : 'Ajouter au panier'}</button></div>
+          {error && <p className="form-error">{error}</p>}
+          <div className="purchase-note"><strong>Paiement à la livraison</strong><span>Pour la V1 One Market en RDC, le paiement est effectué au moment de la livraison.</span></div>
+        </section>
+      </div>
+
+      <ProductReviews product={product} />
     </main>
   )
 }
