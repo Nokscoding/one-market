@@ -1,5 +1,6 @@
 import { ArrowRight, Store, Truck, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { money } from '../lib/format'
 import { supabase } from '../lib/supabase'
@@ -41,15 +42,16 @@ export default function ProductQuickView({ product, onClose }) {
         const urls = [...new Set([...(initial || []), ...((data || []).map(item => item.secure_url).filter(Boolean))])]
         setImages(urls)
       })
+      .catch(() => {})
 
     return () => { active = false }
   }, [product?.id, fallbackImage])
 
   const currentImage = useMemo(() => images[selectedImage] || fallbackImage, [images, selectedImage, fallbackImage])
 
-  if (!product) return null
+  if (!product || typeof document === 'undefined') return null
 
-  return (
+  return createPortal(
     <div className="quick-view-backdrop" role="presentation" onMouseDown={onClose}>
       <section className="quick-view-modal" role="dialog" aria-modal="true" aria-label={`Aperçu de ${product.name}`} onMouseDown={(event) => event.stopPropagation()}>
         <button className="quick-view-close" onClick={onClose} aria-label="Fermer l'aperçu"><X size={21} /></button>
@@ -77,6 +79,7 @@ export default function ProductQuickView({ product, onClose }) {
           <Link className="quick-view-link" to={`/product/${product.id}`} onClick={onClose}>Voir la fiche produit <ArrowRight size={18} /></Link>
         </div>
       </section>
-    </div>
+    </div>,
+    document.body,
   )
 }

@@ -1,5 +1,6 @@
 import { Package, ShoppingBag, Store, UserRound, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import SmartImage from './SmartImage'
@@ -32,17 +33,20 @@ export default function AllMenuDrawer({ open, onClose, user, profile }) {
       .then(({ data }) => {
         if (active) setCategories(data || [])
       })
+      .catch(() => {
+        if (active) setCategories([])
+      })
     return () => { active = false }
   }, [open, categories.length])
 
-  if (!open) return null
+  if (!open || typeof document === 'undefined') return null
 
   const firstName = profile?.full_name?.trim()?.split(' ')?.[0]
   const close = () => onClose()
 
-  return (
+  return createPortal(
     <div className="all-menu-backdrop" onMouseDown={close} role="presentation">
-      <aside className="all-menu-drawer" onMouseDown={(event) => event.stopPropagation()} aria-label="Tout One Market">
+      <aside id="one-market-all-menu" className="all-menu-drawer" onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label="Tout One Market">
         <div className="all-menu-head">
           <div>
             <span>{user ? `Bonjour${firstName ? `, ${firstName}` : ''}` : 'Bienvenue sur'}</span>
@@ -68,10 +72,11 @@ export default function AllMenuDrawer({ open, onClose, user, profile }) {
                 <span>{category.name}</span>
               </Link>
             ))}
-            {!categories.length && <div className="all-menu-category-empty">Chargement des catégories…</div>}
+            {!categories.length && <div className="all-menu-category-empty">Aucune catégorie disponible pour le moment.</div>}
           </div>
         </section>
       </aside>
-    </div>
+    </div>,
+    document.body,
   )
 }

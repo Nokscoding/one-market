@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import ProductCard from '../components/ProductCard'
 import Loader from '../components/Loader'
 import EmptyState from '../components/EmptyState'
+import SmartImage from '../components/SmartImage'
 import { supabase } from '../lib/supabase'
 
 export default function Catalog() {
@@ -17,15 +18,19 @@ export default function Catalog() {
   const view = params.get('view') || ''
 
   useEffect(() => {
+    let active = true
     supabase
       .from('categories')
       .select('*')
       .eq('is_active', true)
       .order('sort_order')
-      .then(({ data }) => setCategories(data || []))
+      .then(({ data }) => { if (active) setCategories(data || []) })
+      .catch(() => { if (active) setCategories([]) })
+    return () => { active = false }
   }, [])
 
   useEffect(() => {
+    let active = true
     setLoading(true)
 
     let query = supabase
@@ -38,6 +43,7 @@ export default function Catalog() {
     if (category) query = query.eq('category_id', category)
 
     query.then(async ({ data }) => {
+      if (!active) return
       let list = data || []
       const productIds = list.map(p => p.id)
       const storeIds = [...new Set(list.map(p => p.store_id))]
@@ -51,9 +57,10 @@ export default function Catalog() {
           : Promise.resolve({ data: [] }),
       ])
 
+      if (!active) return
       const storeMap = Object.fromEntries((stores || []).map(s => [s.id, s]))
       const imageMap = {}
-      ;(images || []).forEach(i => { if (!imageMap[i.product_id]) imageMap[i.product_id] = i.secure_url })
+      ;(images || []).forEach(i => { if (!imageMap[i.product_id] && i.secure_url) imageMap[i.product_id] = i.secure_url })
 
       list = list
         .map(p => ({ ...p, store: storeMap[p.store_id], image: imageMap[p.id] }))
@@ -63,7 +70,14 @@ export default function Catalog() {
 
       setProducts(list)
       setLoading(false)
-    }).catch(() => setLoading(false))
+    }).catch(() => {
+      if (active) {
+        setProducts([])
+        setLoading(false)
+      }
+    })
+
+    return () => { active = false }
   }, [q, category, view])
 
   const selectedCategory = categories.find(c => c.id === category)
@@ -95,7 +109,7 @@ export default function Catalog() {
           <div className="category-row">
             {categories.map(c => (
               <Link key={c.id} to={`/catalog?category=${c.id}`} className="category-card">
-                {c.image_url ? <img src={c.image_url} alt="" /> : <div className="category-mark">{c.name.slice(0, 1).toUpperCase()}</div>}
+                <SmartImage src={c.image_url} alt={c.name} fallback={c.name.slice(0, 1).toUpperCase()} className="category-card-image" fit="cover" />
                 <span>{c.name}</span>
               </Link>
             ))}
