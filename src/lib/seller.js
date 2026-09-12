@@ -36,8 +36,16 @@ export function sellerType(code) {
 export function normalizeOptionalUrl(value) {
   const raw = String(value || '').trim()
   if (!raw) return null
-  if (/^https?:\/\//i.test(raw)) return raw
-  return `https://${raw}`
+  const candidate = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`
+  try {
+    const parsed = new URL(candidate)
+    if (!['http:', 'https:'].includes(parsed.protocol) || !parsed.hostname || !parsed.hostname.includes('.')) {
+      throw new Error('INVALID_URL')
+    }
+    return parsed.toString()
+  } catch {
+    throw new Error(`Lien invalide : ${raw}`)
+  }
 }
 
 export function publicSocialLinks(store) {
