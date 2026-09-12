@@ -15,6 +15,7 @@ import Home from './pages/Home'
 import OrderPage from './pages/OrderPage'
 import OrdersPage from './pages/OrdersPage'
 import ProductPage from './pages/ProductPage'
+import SellerPage from './pages/SellerPage'
 import StorePage from './pages/StorePage'
 import Stores from './pages/Stores'
 
@@ -25,6 +26,8 @@ function Private({ children }) {
 export default function App() {
   const location = useLocation()
   const authPage = location.pathname === '/auth'
+  const sellerPage = location.pathname.startsWith('/seller')
+  const standalonePage = authPage || sellerPage
   const [introVisible, setIntroVisible] = useState(true)
   const [introLeaving, setIntroLeaving] = useState(false)
 
@@ -56,7 +59,7 @@ export default function App() {
     <div className="app">
       {introVisible && <SiteIntro leaving={introLeaving} />}
 
-      {!authPage && <Header />}
+      {!standalonePage && <Header />}
 
       <div className="route-stage" key={`${location.pathname}${location.search}`}>
         <Routes location={location}>
@@ -73,11 +76,12 @@ export default function App() {
           <Route path="/orders/:id" element={<Private><OrderPage /></Private>} />
           <Route path="/chat/:id" element={<Private><ChatPage /></Private>} />
           <Route path="/account" element={<Private><AccountPage /></Private>} />
+          <Route path="/seller" element={<Private><SellerPage /></Private>} />
           <Route path="*" element={<Home />} />
         </Routes>
       </div>
 
-      {!authPage && <Footer />}
+      {!standalonePage && <Footer />}
     </div>
   )
 }
