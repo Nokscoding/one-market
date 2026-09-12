@@ -6,6 +6,7 @@ import Footer from './components/Footer'
 import Header from './components/Header'
 import NotificationCenter from './components/NotificationCenter'
 import NotificationPermissionPrompt from './components/NotificationPermissionPrompt'
+import ReportProblem from './components/ReportProblem'
 import SiteIntro from './components/SiteIntro'
 import ProtectedRoute from './components/ProtectedRoute'
 import AuthPage from './pages/AuthPage'
@@ -61,7 +62,11 @@ export default function App() {
     <div className="app">
       {introVisible && <SiteIntro leaving={introLeaving} />}
       {!standalonePage && <Header />}
-      {sellerPage && <><div className="seller-floating-notifications"><NotificationCenter/></div><Link className="seller-return-site" to="/">← Retourner sur One Market</Link></>}
+      {sellerPage && <>
+        <div className="seller-floating-notifications"><NotificationCenter/></div>
+        <div className="seller-floating-report"><ReportProblem source="seller_workspace"/></div>
+        <Link className="seller-return-site" to="/">← Retourner sur One Market</Link>
+      </>}
 
       <div className="route-stage" key={`${location.pathname}${location.search}`}>
         <Routes location={location}>
