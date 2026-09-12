@@ -7,8 +7,8 @@ import { supabase } from '../lib/supabase'
 import Loader from './Loader'
 import SellerApplicationForm from './SellerApplicationForm'
 
-export default function SellerApplicationGate({ embedded = false }) {
-  const { user } = useAuth()
+export default function SellerApplicationGate({ embedded = false, children = null }) {
+  const { user, refreshProfile } = useAuth()
   const [accepted, setAccepted] = useState(false)
   const [checked, setChecked] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -32,22 +32,28 @@ export default function SellerApplicationGate({ embedded = false }) {
     if (!checked || saving) return
     setSaving(true)
     setError('')
-    const { error: rpcError } = await supabase.rpc('accept_seller_terms', { p_legal_version: LEGAL_VERSION })
-    if (rpcError) setError(rpcError.message || 'Impossible d’enregistrer ton acceptation.')
-    else setAccepted(true)
-    setSaving(false)
+    try {
+      const { error: rpcError } = await supabase.rpc('accept_seller_terms', { p_legal_version: LEGAL_VERSION })
+      if (rpcError) throw rpcError
+      setAccepted(true)
+      await refreshProfile()
+    } catch (acceptError) {
+      setError(acceptError?.message || 'Impossible d’enregistrer ton acceptation.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (loading) return <div className="seller-legal-gate-loading"><Loader /></div>
-  if (accepted) return <SellerApplicationForm embedded={embedded} />
+  if (accepted) return children || <SellerApplicationForm embedded={embedded} />
 
   return (
     <section className={`seller-legal-gate ${embedded ? 'is-embedded' : ''}`}>
       <div className="seller-legal-gate-icon"><Store size={26}/></div>
       <div className="seller-legal-gate-copy">
         <span className="eyebrow">Avant de vendre</span>
-        <h2>Les règles sont les mêmes pour toutes les boutiques.</h2>
-        <p>One Market vérifie l’identité et l’activité des vendeurs. Avant de créer ton dossier, lis et accepte les règles qui protègent les clients, les vendeurs et la marketplace.</p>
+        <h2>{children ? 'Confirme les conditions de ta boutique.' : 'Les règles sont les mêmes pour toutes les boutiques.'}</h2>
+        <p>{children ? 'Pour continuer à gérer ta boutique, confirme les règles vendeur de One Market. Cette acceptation est enregistrée dans ton compte.' : 'One Market vérifie l’identité et l’activité des vendeurs. Avant de créer ton dossier, lis et accepte les règles qui protègent les clients, les vendeurs et la marketplace.'}</p>
       </div>
 
       <div className="seller-legal-summary">
