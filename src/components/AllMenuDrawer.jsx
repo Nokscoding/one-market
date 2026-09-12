@@ -59,6 +59,7 @@ export default function AllMenuDrawer({ open, onClose, user, profile }) {
           <Link to="/catalog?view=new" onClick={close}><ShoppingBag size={19} /><span><b>Nouveautés</b><small>Les derniers produits ajoutés</small></span></Link>
           <Link to="/catalog" onClick={close}><ShoppingBag size={19} /><span><b>Tous les produits</b><small>Parcourir tout le catalogue</small></span></Link>
           <Link to="/stores" onClick={close}><Store size={19} /><span><b>Boutiques</b><small>Découvrir les vendeurs One Market</small></span></Link>
+          <Link to={user ? '/seller' : '/auth'} onClick={close}><Store size={19} /><span><b>Vendre sur One Market</b><small>Créer et gérer votre boutique</small></span></Link>
           <Link to={user ? '/favorites' : '/auth'} onClick={close}><Heart size={19} /><span><b>Mes favoris</b><small>Retrouver les produits enregistrés</small></span></Link>
           <Link to={user ? '/orders' : '/auth'} onClick={close}><Package size={19} /><span><b>Mes commandes</b><small>Suivre mes achats</small></span></Link>
           <Link to={user ? '/account' : '/auth'} onClick={close}><UserRound size={19} /><span><b>{user ? 'Mon compte' : 'Se connecter'}</b><small>Profil et informations personnelles</small></span></Link>
