@@ -1,12 +1,13 @@
 import { ChevronLeft, ChevronRight, Minus, Plus, ShoppingBag, Store, Truck, Zap } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import Loader from '../components/Loader'
 import EmptyState from '../components/EmptyState'
 import FavoriteButton from '../components/FavoriteButton'
+import Loader from '../components/Loader'
 import ProductReviews from '../components/ProductReviews'
 import RatingStars from '../components/RatingStars'
 import SmartImage from '../components/SmartImage'
+import StoreTrustBadge from '../components/StoreTrustBadge'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import { cdf, DELIVERY_OPTIONS } from '../lib/delivery'
@@ -105,7 +106,7 @@ export default function ProductPage() {
   }
 
   if (loading) return <Loader fullscreen />
-  if (!product || !store) return <main className="section-shell page-space"><EmptyState title="Produit introuvable" /></main>
+  if (!product || !store) return <main className="section-shell page-space"><EmptyState title="Produit introuvable"/></main>
 
   const stockLabel = stock <= 0 ? 'Rupture de stock' : stock <= 5 ? `Plus que ${stock} disponible${stock > 1 ? 's' : ''}` : 'Disponible en stock'
 
@@ -123,18 +124,18 @@ export default function ProductPage() {
         <section className="product-detail">
           <div className="product-detail-topline"><span className="eyebrow">Boutique RDC</span><FavoriteButton productId={product.id} className="favorite-button--detail" showLabel/></div>
           <h1>{product.name}</h1>
-          <Link to={`/store/${store.slug}`} className="seller-link"><Store size={17}/> {store.name}</Link>
+          <div className="seller-link-row"><Link to={`/store/${store.slug}`} className="seller-link"><Store size={17}/> {store.name}</Link><StoreTrustBadge store={store} compact/></div>
           <div className="product-detail-rating"><RatingStars value={rating} count={reviewCount}/><a href="#reviews">{reviewCount ? 'Lire les avis' : 'Soyez le premier à donner un avis'}</a></div>
           <div className="detail-price">{money(price, product.currency)}</div>
           <p className="detail-description">{product.description || 'Aucune description supplémentaire pour ce produit.'}</p>
-          <div className="product-detail-trust"><div><strong>{stockLabel}</strong><span>Stock affiché en temps réel</span></div><div><strong>Paiement à la livraison</strong><span>Vous payez à la réception de votre commande</span></div><div><strong>Boutique One Market</strong><span>Produit vendu par {store.name}</span></div></div>
+          <div className="product-detail-trust"><div><strong>{stockLabel}</strong><span>Stock affiché en temps réel</span></div><div><strong>Paiement à la livraison</strong><span>Le paiement se fait directement auprès du livreur à la réception</span></div><div><strong>Boutique One Market</strong><span>Produit vendu par {store.name}</span></div></div>
 
-          <div className="product-delivery-preview"><div className="product-delivery-preview-head"><Truck size={19}/><div><strong>Livraison One Market</strong><span>Le choix final se fait dans le panier ou au checkout.</span></div></div><div>{DELIVERY_OPTIONS.map(option => <span key={option.code}><strong>{option.label}</strong><b>{cdf(option.feeCdf)}</b><small>{option.description}</small></span>)}</div></div>
+          <div className="product-delivery-preview"><div className="product-delivery-preview-head"><Truck size={19}/><div><strong>Livraison One Market</strong><span>Choisissez la livraison normale ou express lors de votre commande.</span></div></div><div>{DELIVERY_OPTIONS.map(option => <span key={option.code}><strong>{option.label}</strong><b>{cdf(option.feeCdf)}</b><small>{option.description}</small></span>)}</div></div>
 
           {product.has_variants && <div className="field-block"><label>Variante</label><div className="variant-list">{variants.map(v => <button key={v.id} className={variantId === v.id ? 'active' : ''} onClick={() => setVariantId(v.id)}>{Object.values(v.attributes || {}).join(' · ') || 'Option'}</button>)}</div></div>}
           <div className="purchase-row purchase-row--marketplace"><div className="qty-control"><button onClick={() => setQty(q => Math.max(1, q - 1))}><Minus size={16}/></button><span>{qty}</span><button onClick={() => setQty(q => Math.min(Math.max(stock, 1), q + 1))}><Plus size={16}/></button></div><div className="purchase-main-actions"><button className="button primary grow" disabled={adding || stock <= 0} onClick={add}><ShoppingBag size={18}/> {stock <= 0 ? 'Rupture de stock' : adding ? 'Ajout…' : 'Ajouter au panier'}</button><button className="button buy-now-button grow" disabled={adding || stock <= 0} onClick={buyNow}><Zap size={18}/> Acheter maintenant</button></div></div>
           {error && <p className="form-error">{error}</p>}
-          <div className="purchase-note"><strong>Paiement à la livraison</strong><span>Les produits restent facturés en USD et les frais de livraison en FC, sans conversion arbitraire.</span></div>
+          <div className="purchase-note"><strong>Paiement à la livraison</strong><span>Payez directement le livreur au moment de recevoir votre commande.</span></div>
         </section>
       </div>
       <ProductReviews product={product}/>
