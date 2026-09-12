@@ -16,6 +16,7 @@ export default function Catalog() {
   const q = params.get('q') || ''
   const category = params.get('category') || ''
   const view = params.get('view') || ''
+  const sort = params.get('sort') || 'newest'
 
   useEffect(() => {
     let active = true
@@ -68,6 +69,16 @@ export default function Catalog() {
 
       if (view === 'new') list = list.slice(0, 12)
 
+      if (sort === 'rating') {
+        list.sort((a, b) => (Number(b.rating_avg) || 0) - (Number(a.rating_avg) || 0) || (Number(b.rating_count) || 0) - (Number(a.rating_count) || 0))
+      } else if (sort === 'price_asc') {
+        list.sort((a, b) => Number(a.price) - Number(b.price))
+      } else if (sort === 'price_desc') {
+        list.sort((a, b) => Number(b.price) - Number(a.price))
+      } else {
+        list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      }
+
       setProducts(list)
       setLoading(false)
     }).catch(() => {
@@ -78,7 +89,7 @@ export default function Catalog() {
     })
 
     return () => { active = false }
-  }, [q, category, view])
+  }, [q, category, view, sort])
 
   const selectedCategory = categories.find(c => c.id === category)
   const title = useMemo(() => {
@@ -135,6 +146,15 @@ export default function Catalog() {
         </select>
         {view === 'new' && <button className="text-button" onClick={() => setFilter('view', '')}>Voir tous les produits</button>}
         {q && <button className="text-button" onClick={() => setFilter('q', '')}><Search size={16} /> Effacer la recherche</button>}
+        <div className="catalog-sort">
+          <label htmlFor="catalog-sort">Trier par</label>
+          <select id="catalog-sort" value={sort} onChange={e => setFilter('sort', e.target.value)}>
+            <option value="newest">Plus récents</option>
+            <option value="rating">Mieux notés</option>
+            <option value="price_asc">Prix croissant</option>
+            <option value="price_desc">Prix décroissant</option>
+          </select>
+        </div>
       </div>
 
       {products.length
