@@ -22,23 +22,23 @@ export default function Footer() {
         <div className="om-footer-column">
           <strong>Espace client</strong>
           <Link to="/account">Mon compte</Link>
-          <Link to="/account?tab=profile">Infos personnelles</Link>
-          <Link to="/account?tab=addresses">Adresses</Link>
           <Link to="/orders">Mes commandes</Link>
           <Link to="/favorites">Favoris</Link>
+          <Link to="/account?tab=notifications">Notifications</Link>
+          <Link to="/account?tab=support">Assistance</Link>
         </div>
 
         <div className="om-footer-column">
-          <strong>Aide & paiement</strong>
-          <Link to="/account?tab=client">Espace client</Link>
-          <Link to="/account?tab=payments">Modes de paiement</Link>
-          <Link to="/account?tab=support">Signaler un problème</Link>
-          <Link to="/account?tab=notifications">Notifications</Link>
+          <strong>Informations</strong>
+          <Link to="/legal/conditions">Conditions d’utilisation</Link>
+          <Link to="/legal/confidentialite">Confidentialité</Link>
+          <Link to="/legal/cookies">Cookies</Link>
+          <Link to="/legal/vendeurs">Conditions vendeur</Link>
           <Link to="/account?tab=security">Sécurité</Link>
         </div>
       </div>
       <div className="om-footer-bottom">
-        <span>© One Market</span>
+        <span>© {new Date().getFullYear()} One Market</span>
         <span>Powered by <strong>NKS Services</strong></span>
       </div>
     </footer>
