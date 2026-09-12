@@ -94,9 +94,9 @@ export default function ProductPage() {
     setAdding(true)
     try {
       await addItem(product.id, variantId || null, qty)
-      const query = new URLSearchParams({ product: product.id, qty: String(qty) })
+      const query = new URLSearchParams({ added: '1', product: product.id, qty: String(qty) })
       if (variantId) query.set('variant', variantId)
-      navigate(`/cart/added?${query.toString()}`)
+      navigate(`/cart?${query.toString()}`)
     } catch (e) {
       setError(e.message || 'Impossible d’ajouter au panier.')
     } finally {
@@ -108,11 +108,7 @@ export default function ProductPage() {
     if (!user) return navigate('/auth', { state: { from: `/product/${id}` } })
     if (!validatePurchase()) return
 
-    const query = new URLSearchParams({
-      mode: 'buy-now',
-      product: product.id,
-      qty: String(qty),
-    })
+    const query = new URLSearchParams({ mode: 'buy-now', product: product.id, qty: String(qty) })
     if (variantId) query.set('variant', variantId)
     navigate(`/checkout?${query.toString()}`)
   }
@@ -138,42 +134,19 @@ export default function ProductPage() {
         </section>
 
         <section className="product-detail">
-          <div className="product-detail-topline">
-            <span className="eyebrow">Boutique RDC</span>
-            <FavoriteButton productId={product.id} className="favorite-button--detail" showLabel />
-          </div>
+          <div className="product-detail-topline"><span className="eyebrow">Boutique RDC</span><FavoriteButton productId={product.id} className="favorite-button--detail" showLabel /></div>
           <h1>{product.name}</h1>
           <Link to={`/store/${store.slug}`} className="seller-link"><Store size={17} /> {store.name}</Link>
-
-          <div className="product-detail-rating">
-            <RatingStars value={rating} count={reviewCount} />
-            <a href="#reviews">{reviewCount ? 'Lire les avis' : 'Soyez le premier à donner un avis'}</a>
-          </div>
-
+          <div className="product-detail-rating"><RatingStars value={rating} count={reviewCount} /><a href="#reviews">{reviewCount ? 'Lire les avis' : 'Soyez le premier à donner un avis'}</a></div>
           <div className="detail-price">{money(price, product.currency)}</div>
           <p className="detail-description">{product.description || 'Aucune description supplémentaire pour ce produit.'}</p>
-
-          <div className="product-detail-trust">
-            <div><strong>{stockLabel}</strong><span>Stock affiché en temps réel</span></div>
-            <div><strong>Paiement à la livraison</strong><span>Vous payez à la réception de votre commande</span></div>
-            <div><strong>Boutique One Market</strong><span>Produit vendu par {store.name}</span></div>
-          </div>
-
+          <div className="product-detail-trust"><div><strong>{stockLabel}</strong><span>Stock affiché en temps réel</span></div><div><strong>Paiement à la livraison</strong><span>Vous payez à la réception de votre commande</span></div><div><strong>Boutique One Market</strong><span>Produit vendu par {store.name}</span></div></div>
           {product.has_variants && <div className="field-block"><label>Variante</label><div className="variant-list">{variants.map(v => <button key={v.id} className={variantId === v.id ? 'active' : ''} onClick={() => setVariantId(v.id)}>{Object.values(v.attributes || {}).join(' · ') || 'Option'}</button>)}</div></div>}
-
-          <div className="purchase-row purchase-row--marketplace">
-            <div className="qty-control"><button onClick={() => setQty(q => Math.max(1, q - 1))}><Minus size={16} /></button><span>{qty}</span><button onClick={() => setQty(q => Math.min(Math.max(stock, 1), q + 1))}><Plus size={16} /></button></div>
-            <div className="purchase-main-actions">
-              <button className="button primary grow" disabled={adding || stock <= 0} onClick={add}><ShoppingBag size={18} /> {stock <= 0 ? 'Rupture de stock' : adding ? 'Ajout…' : 'Ajouter au panier'}</button>
-              <button className="button buy-now-button grow" disabled={adding || stock <= 0} onClick={buyNow}><Zap size={18}/> Acheter maintenant</button>
-            </div>
-          </div>
-
+          <div className="purchase-row purchase-row--marketplace"><div className="qty-control"><button onClick={() => setQty(q => Math.max(1, q - 1))}><Minus size={16} /></button><span>{qty}</span><button onClick={() => setQty(q => Math.min(Math.max(stock, 1), q + 1))}><Plus size={16} /></button></div><div className="purchase-main-actions"><button className="button primary grow" disabled={adding || stock <= 0} onClick={add}><ShoppingBag size={18} /> {stock <= 0 ? 'Rupture de stock' : adding ? 'Ajout…' : 'Ajouter au panier'}</button><button className="button buy-now-button grow" disabled={adding || stock <= 0} onClick={buyNow}><Zap size={18}/> Acheter maintenant</button></div></div>
           {error && <p className="form-error">{error}</p>}
           <div className="purchase-note"><strong>Paiement à la livraison</strong><span>Pour la V1 One Market en RDC, le paiement est effectué au moment de la livraison. D’autres moyens de paiement seront ajoutés ensuite.</span></div>
         </section>
       </div>
-
       <ProductReviews product={product} />
     </main>
   )
