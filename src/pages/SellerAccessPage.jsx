@@ -1,6 +1,6 @@
 import { BarChart3, ClipboardList, ShoppingBag } from 'lucide-react'
 import Loader from '../components/Loader'
-import SellerApplicationForm from '../components/SellerApplicationForm'
+import SellerApplicationGate from '../components/SellerApplicationGate'
 import { useAuth } from '../context/AuthContext'
 import SellerWorkspacePage from './SellerWorkspacePage'
 
@@ -24,11 +24,11 @@ export default function SellerAccessPage() {
         <div className="seller-join-points">
           <div><ShoppingBag size={21}/><span><strong>Catalogue vendeur</strong><small>Produits, images, variantes, prix et stock.</small></span></div>
           <div><ClipboardList size={21}/><span><strong>Commandes</strong><small>Suivi de chaque commande et de la livraison.</small></span></div>
-          <div><BarChart3 size={21}/><span><strong>Statistiques</strong><small>Uniquement des données réelles de la boutique.</small></span></div>
+          <div><BarChart3 size={21}/><span><strong>Statistiques</strong><small>Les données réelles de ta boutique, simplement.</small></span></div>
         </div>
       </section>
 
-      <SellerApplicationForm />
+      <SellerApplicationGate />
     </main>
   )
 }
