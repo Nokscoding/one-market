@@ -6,6 +6,7 @@ import FavoriteButton from '../components/FavoriteButton'
 import Loader from '../components/Loader'
 import ProductReviews from '../components/ProductReviews'
 import RatingStars from '../components/RatingStars'
+import ReportProblem from '../components/ReportProblem'
 import SmartImage from '../components/SmartImage'
 import StoreTrustBadge from '../components/StoreTrustBadge'
 import { useAuth } from '../context/AuthContext'
@@ -136,6 +137,7 @@ export default function ProductPage() {
           <div className="purchase-row purchase-row--marketplace"><div className="qty-control"><button onClick={() => setQty(q => Math.max(1, q - 1))}><Minus size={16}/></button><span>{qty}</span><button onClick={() => setQty(q => Math.min(Math.max(stock, 1), q + 1))}><Plus size={16}/></button></div><div className="purchase-main-actions"><button className="button primary grow" disabled={adding || stock <= 0} onClick={add}><ShoppingBag size={18}/> {stock <= 0 ? 'Rupture de stock' : adding ? 'Ajout…' : 'Ajouter au panier'}</button><button className="button buy-now-button grow" disabled={adding || stock <= 0} onClick={buyNow}><Zap size={18}/> Acheter maintenant</button></div></div>
           {error && <p className="form-error">{error}</p>}
           <div className="purchase-note"><strong>Paiement à la livraison</strong><span>Payez directement le livreur au moment de recevoir votre commande.</span></div>
+          <div className="product-report-row"><ReportProblem source="product_page" product={product} store={store}/></div>
         </section>
       </div>
       <ProductReviews product={product}/>
