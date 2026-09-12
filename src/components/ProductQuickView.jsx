@@ -4,6 +4,8 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { money } from '../lib/format'
 import { supabase } from '../lib/supabase'
+import FavoriteButton from './FavoriteButton'
+import RatingStars from './RatingStars'
 import SmartImage from './SmartImage'
 
 export default function ProductQuickView({ product, onClose }) {
@@ -11,6 +13,9 @@ export default function ProductQuickView({ product, onClose }) {
   const store = product?.store || product?.stores
   const [images, setImages] = useState(fallbackImage ? [fallbackImage] : [])
   const [selectedImage, setSelectedImage] = useState(0)
+  const rating = Number(product?.rating_avg) || 0
+  const reviewCount = Number(product?.rating_count) || 0
+  const stock = Number(product?.stock_qty) || 0
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow
@@ -51,6 +56,14 @@ export default function ProductQuickView({ product, onClose }) {
 
   if (!product || typeof document === 'undefined') return null
 
+  const stockLabel = product.has_variants
+    ? 'Options disponibles'
+    : stock <= 0
+      ? 'Rupture de stock'
+      : stock <= 5
+        ? `Plus que ${stock} en stock`
+        : 'En stock'
+
   return createPortal(
     <div className="quick-view-backdrop" role="presentation" onMouseDown={onClose}>
       <section className="quick-view-modal" role="dialog" aria-modal="true" aria-label={`Aperçu de ${product.name}`} onMouseDown={(event) => event.stopPropagation()}>
@@ -73,10 +86,15 @@ export default function ProductQuickView({ product, onClose }) {
           <span className="quick-view-kicker">APERÇU RAPIDE</span>
           <h2>{product.name}</h2>
           {store && <Link className="quick-view-store" to={`/store/${store.slug}`} onClick={onClose}><Store size={16} /> {store.name}</Link>}
+          <div className="quick-view-rating"><RatingStars value={rating} count={reviewCount} /></div>
           <strong className="quick-view-price">{money(product.price, product.currency)}</strong>
+          <span className={`quick-view-stock ${!product.has_variants && stock <= 0 ? 'is-out' : !product.has_variants && stock <= 5 ? 'is-low' : ''}`}>{stockLabel}</span>
           <p>{product.description || 'Découvrez ce produit et toutes ses informations sur sa fiche One Market.'}</p>
           <div className="quick-view-delivery"><Truck size={17} /><span><b>Paiement à la livraison</b><small>Disponible pour la V1 One Market en RDC.</small></span></div>
-          <Link className="quick-view-link" to={`/product/${product.id}`} onClick={onClose}>Voir la fiche produit <ArrowRight size={18} /></Link>
+          <div className="quick-view-actions">
+            <Link className="quick-view-link" to={`/product/${product.id}`} onClick={onClose}>Voir la fiche produit <ArrowRight size={18} /></Link>
+            <FavoriteButton productId={product.id} />
+          </div>
         </div>
       </section>
     </div>,
