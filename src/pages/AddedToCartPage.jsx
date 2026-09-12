@@ -1,6 +1,6 @@
 import { ArrowRight, CheckCircle2, Minus, Plus, ShoppingBag, Zap } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import Loader from '../components/Loader'
 import SmartImage from '../components/SmartImage'
 import { useCart } from '../context/CartContext'
@@ -9,19 +9,31 @@ import { supabase } from '../lib/supabase'
 
 export default function AddedToCartPage() {
   const [params] = useSearchParams()
+  const location = useLocation()
   const productId = params.get('product') || ''
   const variantId = params.get('variant') || ''
   const addedQty = Math.max(1, Number(params.get('qty')) || 1)
-  const { items, count, total: cartTotal, loading: cartLoading, updateQuantity } = useCart()
-  const [product, setProduct] = useState(null)
-  const [variant, setVariant] = useState(null)
-  const [store, setStore] = useState(null)
-  const [image, setImage] = useState('')
-  const [loading, setLoading] = useState(true)
+  const navigationSnapshot = location.state?.addedProduct || null
+  const snapshotMatches = Boolean(
+    navigationSnapshot?.product?.id === productId &&
+    (navigationSnapshot?.variant?.id || '') === variantId
+  )
+
+  const { items, count, total: cartTotal, updateQuantity } = useCart()
+  const [product, setProduct] = useState(() => snapshotMatches ? navigationSnapshot.product : null)
+  const [variant, setVariant] = useState(() => snapshotMatches ? navigationSnapshot.variant || null : null)
+  const [store, setStore] = useState(() => snapshotMatches ? navigationSnapshot.store || null : null)
+  const [image, setImage] = useState(() => snapshotMatches ? navigationSnapshot.image || '' : '')
+  const [loading, setLoading] = useState(() => !snapshotMatches)
   const [updating, setUpdating] = useState(false)
   const [message, setMessage] = useState('')
 
   useEffect(() => {
+    if (snapshotMatches) {
+      setLoading(false)
+      return undefined
+    }
+
     let active = true
     if (!productId) {
       setLoading(false)
@@ -46,13 +58,13 @@ export default function AddedToCartPage() {
     })().catch(() => {}).finally(() => active && setLoading(false))
 
     return () => { active = false }
-  }, [productId, variantId])
+  }, [productId, variantId, snapshotMatches])
 
   const cartItem = useMemo(() => items.find(item => item.product_id === productId && (item.product_variant_id || '') === variantId), [items, productId, variantId])
-  const unitPrice = Number(variant?.price ?? product?.price ?? cartItem?.unitPrice ?? 0)
-  const quantity = cartItem?.quantity || addedQty
+  const unitPrice = Number(variant?.price ?? product?.price ?? navigationSnapshot?.unitPrice ?? cartItem?.unitPrice ?? 0)
+  const quantity = cartItem?.quantity || navigationSnapshot?.quantity || addedQty
   const productTotal = unitPrice * quantity
-  const maxStock = Number(variant?.stock_qty ?? product?.stock_qty ?? cartItem?.availableStock ?? 0)
+  const maxStock = Number(variant?.stock_qty ?? product?.stock_qty ?? navigationSnapshot?.availableStock ?? cartItem?.availableStock ?? 0)
 
   async function changeQuantity(next) {
     if (!cartItem || updating || next < 1 || (maxStock > 0 && next > maxStock)) return
@@ -67,7 +79,7 @@ export default function AddedToCartPage() {
     }
   }
 
-  if (loading || cartLoading) return <Loader fullscreen />
+  if (loading) return <Loader fullscreen />
 
   if (!product) {
     return <main className="section-shell page-space"><div className="purchase-confirm-card"><h1>Produit introuvable</h1><Link className="button primary" to="/catalog">Retour au catalogue</Link></div></main>
@@ -93,9 +105,9 @@ export default function AddedToCartPage() {
             <div className="purchase-confirm-qty">
               <span>Quantité dans le panier</span>
               <div className="qty-control small">
-                <button disabled={updating || quantity <= 1} onClick={() => changeQuantity(quantity - 1)}><Minus size={14}/></button>
+                <button disabled={updating || quantity <= 1 || !cartItem} onClick={() => changeQuantity(quantity - 1)}><Minus size={14}/></button>
                 <span>{quantity}</span>
-                <button disabled={updating || quantity >= maxStock} onClick={() => changeQuantity(quantity + 1)}><Plus size={14}/></button>
+                <button disabled={updating || !cartItem || quantity >= maxStock} onClick={() => changeQuantity(quantity + 1)}><Plus size={14}/></button>
               </div>
             </div>
             <small className="purchase-stock-note">{maxStock > 0 ? `${maxStock} unité${maxStock > 1 ? 's' : ''} disponible${maxStock > 1 ? 's' : ''}` : 'Stock indisponible'}</small>
