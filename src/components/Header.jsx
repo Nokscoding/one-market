@@ -1,37 +1,27 @@
-import { Home, MapPin, Menu, Package, Search, ShoppingCart, UserRound, X } from 'lucide-react'
-import { useState } from 'react'
+import { ChevronDown, Home, MapPin, Menu, Package, Search, ShoppingCart, UserRound, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
+import { fetchCategories } from '../lib/catalog'
 import Logo from './Logo'
 
 export default function Header() {
-  const [open, setOpen] = useState(false)
-  const [q, setQ] = useState('')
-  const navigate = useNavigate()
-  const { user, profile } = useAuth()
-  const { count } = useCart()
-
-  function search(e) {
-    e.preventDefault()
-    const value = q.trim()
-    navigate(value ? `/catalog?q=${encodeURIComponent(value)}` : '/catalog')
-    setOpen(false)
-  }
-
-  const firstName = profile?.full_name?.trim()?.split(' ')?.[0]
-
-  return (
-    <header className="site-header market-header">
-      <div className="market-topbar"><div className="market-topbar-inner">
-        <Logo />
-        <Link className="market-location desktop-location" to="/catalog"><MapPin size={19} /><span><small>Marketplace</small><strong>RDC ↔ USA</strong></span></Link>
-        <form className="nav-search market-search" onSubmit={search}><select aria-label="Catégorie" defaultValue="all" onChange={e => { if (e.target.value === 'stores') navigate('/stores'); if (e.target.value === 'all') navigate('/catalog') }}><option value="all">Tous</option><option value="stores">Boutiques</option></select><input value={q} onChange={e => setQ(e.target.value)} placeholder="Rechercher sur OneMarket" /><button type="submit" aria-label="Rechercher"><Search size={22} /></button></form>
-        <div className="nav-actions market-actions"><Link className="market-account" to={user ? '/account' : '/auth'}><UserRound className="mobile-account-icon" size={21} /><span><small>{user ? `Bonjour${firstName ? `, ${firstName}` : ''}` : 'Bonjour'}</small><strong>{user ? 'Mon compte' : 'Se connecter'}</strong></span></Link><Link className="market-orders desktop-orders" to={user ? '/orders' : '/auth'}><Package size={20} /><span><small>Suivi</small><strong>Commandes</strong></span></Link><Link className="market-cart" to="/cart" aria-label="Panier"><span className="market-cart-icon"><ShoppingCart size={29} />{count > 0 && <b>{count > 99 ? '99+' : count}</b>}</span><strong>Panier</strong></Link></div>
-      </div><div className="mobile-search-row"><form className="mobile-market-search" onSubmit={search}><Search className="mobile-search-leading" size={21} /><input value={q} onChange={e => setQ(e.target.value)} placeholder="Rechercher ou poser une question" /><button type="submit" aria-label="Rechercher"><Search size={20} /></button></form><Link className="mobile-location-button" to="/catalog" aria-label="Explorer RDC et USA"><MapPin size={23} /></Link></div></div>
-      <div className="market-subnav"><div className="market-subnav-inner"><button className="all-link" onClick={() => setOpen(v => !v)}><Menu size={18} /> Tout</button><NavLink to="/catalog">Nouveautés</NavLink><NavLink to="/catalog?country=CD">RDC</NavLink><NavLink to="/catalog?country=US">États-Unis</NavLink><NavLink to="/stores">Boutiques</NavLink><NavLink to="/catalog?view=categories">Catégories</NavLink><span className="subnav-message">Plusieurs boutiques. Un seul marché.</span></div></div>
-      {open && <div className="mobile-menu market-mobile-menu"><div className="mobile-menu-head"><strong>Explorer OneMarket</strong><button onClick={() => setOpen(false)} aria-label="Fermer"><X size={22}/></button></div><NavLink onClick={() => setOpen(false)} to="/catalog">Tous les produits</NavLink><NavLink onClick={() => setOpen(false)} to="/catalog?view=categories">Catégories</NavLink><NavLink onClick={() => setOpen(false)} to="/stores">Boutiques</NavLink><NavLink onClick={() => setOpen(false)} to="/catalog?country=CD">Produits en RDC</NavLink><NavLink onClick={() => setOpen(false)} to="/catalog?country=US">Produits aux États-Unis</NavLink><NavLink onClick={() => setOpen(false)} to={user ? '/orders' : '/auth'}>Mes commandes</NavLink></div>}
-      <nav className="mobile-bottom-nav" aria-label="Navigation mobile"><NavLink to="/" end><Home size={23}/><span>Accueil</span></NavLink><NavLink to={user ? '/account' : '/auth'}><UserRound size={23}/><span>Compte</span></NavLink><NavLink className="mobile-bottom-cart" to={user ? '/cart' : '/auth'}><span><ShoppingCart size={25}/>{count > 0 && <b>{count > 99 ? '99+' : count}</b>}</span><em>Panier</em></NavLink><NavLink to={user ? '/orders' : '/auth'}><Package size={23}/><span>Commandes</span></NavLink><button className={open ? 'active' : ''} onClick={() => setOpen(v => !v)} aria-label="Menu">{open ? <X size={23}/> : <Menu size={23}/>}<span>Menu</span></button></nav>
-    </header>
-  )
+  const [menuOpen, setMenuOpen] = useState(false), [q,setQ] = useState(''), [categories,setCategories] = useState([]), [scrolled,setScrolled] = useState(false)
+  const navigate=useNavigate(); const {user,profile}=useAuth(); const {count}=useCart(); const first=profile?.full_name?.split(' ')?.[0]
+  useEffect(() => { fetchCategories().then(setCategories).catch(()=>{}) }, [])
+  useEffect(() => { const fn=()=>setScrolled(window.scrollY>18); window.addEventListener('scroll',fn,{passive:true}); return()=>window.removeEventListener('scroll',fn) }, [])
+  function search(e){e.preventDefault(); const v=q.trim(); navigate(v?`/catalog?q=${encodeURIComponent(v)}`:'/catalog'); setMenuOpen(false)}
+  return <header className={`site-header ${scrolled?'is-scrolled':''}`}>
+    <div className="header-main section-shell">
+      <Logo/>
+      <Link to="/catalog" className="delivery-chip"><MapPin size={19}/><span><small>Livraison</small><strong>RDC</strong></span></Link>
+      <form className="main-search" onSubmit={search}><button type="button" className="search-category" onClick={()=>navigate('/catalog')}><span>Tout</span><ChevronDown size={15}/></button><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Rechercher un produit, une boutique…"/><button aria-label="Rechercher"><Search size={22}/></button></form>
+      <div className="header-actions"><Link to={user?'/account':'/auth'} className="header-action"><UserRound size={20}/><span><small>{user?`Bonjour${first?`, ${first}`:''}`:'Bonjour'}</small><strong>{user?'Mon compte':'Se connecter'}</strong></span></Link><Link to={user?'/orders':'/auth'} className="header-action desktop-only"><Package size={20}/><span><small>Retours &</small><strong>Commandes</strong></span></Link><Link to={user?'/cart':'/auth'} className="header-cart"><span><ShoppingCart size={30}/>{count>0&&<b>{count>99?'99+':count}</b>}</span><strong>Panier</strong></Link></div>
+    </div>
+    <div className="mobile-search section-shell"><form onSubmit={search}><Search size={20}/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Rechercher sur One Market"/><button>Go</button></form></div>
+    <nav className="subnav"><div className="section-shell subnav-inner"><button className="all-menu" onClick={()=>setMenuOpen(v=>!v)}><Menu size={18}/> Tout</button><NavLink to="/catalog">Nouveautés</NavLink>{categories.slice(0,5).map(c=><NavLink key={c.id} to={`/catalog?category=${c.id}`}>{c.name}</NavLink>)}<NavLink to="/stores">Boutiques</NavLink><span className="subnav-tagline">Plusieurs boutiques. Un seul marché.</span></div></nav>
+    {menuOpen&&<div className="drawer-backdrop" onClick={()=>setMenuOpen(false)}><aside className="nav-drawer" onClick={e=>e.stopPropagation()}><div className="drawer-head"><div><small>Bienvenue sur</small><strong>One Market</strong></div><button onClick={()=>setMenuOpen(false)}><X/></button></div><div className="drawer-section"><h3>Explorer</h3><Link onClick={()=>setMenuOpen(false)} to="/catalog">Tous les produits</Link><Link onClick={()=>setMenuOpen(false)} to="/stores">Toutes les boutiques</Link>{categories.map(c=><Link onClick={()=>setMenuOpen(false)} key={c.id} to={`/catalog?category=${c.id}`}>{c.name}</Link>)}</div><div className="drawer-section"><h3>Votre compte</h3><Link onClick={()=>setMenuOpen(false)} to={user?'/orders':'/auth'}>Vos commandes</Link><Link onClick={()=>setMenuOpen(false)} to={user?'/account':'/auth'}>Votre compte</Link><Link onClick={()=>setMenuOpen(false)} to="/help">Aide & FAQ</Link></div></aside></div>}
+    <nav className="mobile-bottom"><NavLink to="/" end><Home/><span>Accueil</span></NavLink><NavLink to="/catalog"><Search/><span>Explorer</span></NavLink><NavLink to={user?'/cart':'/auth'} className="mobile-cart"><span><ShoppingCart/>{count>0&&<b>{count}</b>}</span><em>Panier</em></NavLink><NavLink to={user?'/orders':'/auth'}><Package/><span>Commandes</span></NavLink><NavLink to={user?'/account':'/auth'}><UserRound/><span>Compte</span></NavLink></nav>
+  </header>
 }

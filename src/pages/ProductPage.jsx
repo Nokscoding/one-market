@@ -1,69 +1,11 @@
-import { Minus, Plus, ShoppingBag, Store } from 'lucide-react'
+import { Check, ChevronRight, Minus, Plus, ShieldCheck, ShoppingCart, Store, Truck } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import Loader from '../components/Loader'
 import EmptyState from '../components/EmptyState'
+import Loader from '../components/Loader'
+import ProductCard from '../components/ProductCard'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
+import { fetchProduct, fetchProducts } from '../lib/catalog'
 import { money } from '../lib/format'
-import { supabase } from '../lib/supabase'
-
-/**
- * ROUTE: /product/:id
- * PUBLIC: lecture; connexion requise pour ajouter au panier.
- * BUT: fiche produit, galerie, variantes, stock et ajout panier.
- * SUPABASE: products, stores, product_images, product_variants.
- */
-
-export default function ProductPage() {
-  const { id } = useParams()
-  const navigate = useNavigate()
-  const { user } = useAuth()
-  const { addItem } = useCart()
-  const [product, setProduct] = useState(null)
-  const [store, setStore] = useState(null)
-  const [images, setImages] = useState([])
-  const [variants, setVariants] = useState([])
-  const [selectedImage, setSelectedImage] = useState(0)
-  const [variantId, setVariantId] = useState('')
-  const [qty, setQty] = useState(1)
-  const [loading, setLoading] = useState(true)
-  const [adding, setAdding] = useState(false)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    async function load() {
-      const { data: p } = await supabase.from('products').select('*').eq('id', id).eq('is_active', true).maybeSingle()
-      setProduct(p || null)
-      if (p) {
-        const [{ data: s }, { data: imgs }, { data: vars }] = await Promise.all([
-          supabase.from('stores').select('*').eq('id', p.store_id).maybeSingle(),
-          supabase.from('product_images').select('*').eq('product_id', p.id).order('sort_order'),
-          supabase.from('product_variants').select('*').eq('product_id', p.id).eq('is_active', true).order('created_at'),
-        ])
-        setStore(s || null); setImages(imgs || []); setVariants(vars || [])
-        if (p.has_variants && vars?.length) setVariantId(vars[0].id)
-      }
-      setLoading(false)
-    }
-    load()
-  }, [id])
-
-  const selectedVariant = useMemo(() => variants.find(v => v.id === variantId), [variants, variantId])
-  const price = selectedVariant?.price ?? product?.price
-  const stock = product?.has_variants ? selectedVariant?.stock_qty ?? 0 : product?.stock_qty ?? 0
-
-  async function add() {
-    setError('')
-    if (!user) return navigate('/auth', { state: { from: `/product/${id}` } })
-    if (product.has_variants && !variantId) return setError('Choisis une variante.')
-    setAdding(true)
-    try { await addItem(product.id, variantId || null, qty); navigate('/cart') }
-    catch (e) { setError(e.message || 'Impossible d’ajouter au panier.') }
-    finally { setAdding(false) }
-  }
-
-  if (loading) return <Loader fullscreen />
-  if (!product) return <main className="section-shell page-space"><EmptyState title="Produit introuvable" /></main>
-  return <main className="section-shell product-page"><section className="product-gallery"><div className="gallery-main">{images[selectedImage] ? <img src={images[selectedImage].secure_url} alt={product.name} /> : <div className="product-placeholder large">OM</div>}</div>{images.length > 1 && <div className="thumbs">{images.map((img, index) => <button key={img.id} className={selectedImage === index ? 'active' : ''} onClick={() => setSelectedImage(index)}><img src={img.secure_url} alt="" /></button>)}</div>}</section><section className="product-detail"><span className="eyebrow">{store?.country_code === 'US' ? 'Boutique USA' : 'Boutique RDC'}</span><h1>{product.name}</h1>{store && <Link to={`/store/${store.slug}`} className="seller-link"><Store size={17} /> {store.name}</Link>}<div className="detail-price">{money(price, product.currency)}</div><p className="detail-description">{product.description || 'Aucune description supplémentaire pour ce produit.'}</p>{product.has_variants && <div className="field-block"><label>Variante</label><div className="variant-list">{variants.map(v => <button key={v.id} className={variantId === v.id ? 'active' : ''} onClick={() => setVariantId(v.id)}>{Object.values(v.attributes || {}).join(' · ') || 'Option'}</button>)}</div></div>}<div className="purchase-row"><div className="qty-control"><button onClick={() => setQty(q => Math.max(1, q - 1))}><Minus size={16} /></button><span>{qty}</span><button onClick={() => setQty(q => Math.min(Math.max(stock, 1), q + 1))}><Plus size={16} /></button></div><button className="button primary grow" disabled={adding || stock <= 0} onClick={add}><ShoppingBag size={18} /> {stock <= 0 ? 'Rupture de stock' : adding ? 'Ajout…' : 'Ajouter au panier'}</button></div>{error && <p className="form-error">{error}</p>}<div className="purchase-note"><strong>Paiement avec le vendeur</strong><span>Après la commande, un chat privé sera ouvert avec cette boutique pour convenir du paiement et de la livraison.</span></div></section></main>
-}
+export default function ProductPage(){const{id}=useParams(),navigate=useNavigate();const{user}=useAuth(),{addItem}=useCart();const[product,setProduct]=useState(null),[related,setRelated]=useState([]),[loading,setLoading]=useState(true),[imageIndex,setImageIndex]=useState(0),[variantId,setVariantId]=useState(''),[qty,setQty]=useState(1),[tab,setTab]=useState('description'),[adding,setAdding]=useState(false),[error,setError]=useState('');useEffect(()=>{setLoading(true);fetchProduct(id).then(async p=>{setProduct(p);setImageIndex(0);if(p?.has_variants&&p.product_variants?.length)setVariantId(p.product_variants.find(v=>v.is_active)?.id||'');if(p?.category_id){const r=await fetchProducts({category:p.category_id,limit:8});setRelated(r.filter(x=>x.id!==p.id).slice(0,6))}}).finally(()=>setLoading(false))},[id]);const variant=useMemo(()=>product?.product_variants?.find(v=>v.id===variantId),[product,variantId]);const price=variant?.price??product?.price??0,stock=product?.has_variants?(variant?.stock_qty??0):(product?.stock_qty??0);async function add(goCart=false){setError('');if(!user)return navigate('/auth',{state:{from:`/product/${id}`}});if(product.has_variants&&!variantId)return setError('Choisis une variante.');setAdding(true);try{await addItem(product.id,variantId||null,qty);if(goCart)navigate('/cart')}catch(e){setError(e.message||"Impossible d'ajouter au panier.")}finally{setAdding(false)}}if(loading)return <Loader fullscreen/>;if(!product)return <main className="section-shell page-space"><EmptyState title="Produit introuvable"/></main>;const sale=product.old_price&&Number(product.old_price)>Number(price);return <main className="product-page-wrap"><div className="section-shell breadcrumb"><Link to="/catalog">Catalogue</Link><ChevronRight/><span>{product.category?.name||'Produit'}</span><ChevronRight/><b>{product.name}</b></div><section className="section-shell product-layout"><div className="product-gallery-v10"><div className="gallery-thumbs">{product.images.map((img,i)=><button key={img.id} className={i===imageIndex?'active':''} onClick={()=>setImageIndex(i)}><img src={img.secure_url} alt=""/></button>)}</div><div className="gallery-stage">{product.images[imageIndex]?<img src={product.images[imageIndex].secure_url} alt={product.name}/>:<div className="product-placeholder large">OM</div>}</div></div><div className="product-info-v10"><Link to={`/store/${product.store?.slug}`} className="brand-link"><Store size={16}/>{product.store?.name}</Link><h1>{product.name}</h1><div className="product-meta"><span className="rating-stars">★★★★★</span><span>Produit One Market</span></div><hr/><div className="product-main-price">{sale&&<span className="discount-text">-{Math.round((1-Number(price)/Number(product.old_price))*100)}%</span>}<strong>{money(price,product.currency)}</strong></div>{sale&&<p className="old-price">Prix précédent : <del>{money(product.old_price,product.currency)}</del></p>}<p className="tax-note">Prix affiché avant éventuels frais de livraison.</p>{product.has_variants&&<div className="variant-block"><b>Choisir une option</b><div className="variant-pills">{product.product_variants.filter(v=>v.is_active).map(v=><button key={v.id} className={variantId===v.id?'active':''} onClick={()=>setVariantId(v.id)}>{Object.values(v.attributes||{}).join(' · ')||'Option'}</button>)}</div></div>}<div className="product-benefits"><span><ShieldCheck/> Achat encadré par One Market</span><span><Truck/> Livraison en RDC</span><span><Check/> Boutique vérifiée</span></div></div><aside className="buy-box"><div className="buy-price">{money(price,product.currency)}</div><p className="delivery-copy"><Truck/> Livraison à organiser selon votre zone.</p><b className={stock>0?'in-stock':'out-stock'}>{stock>0?'En stock':'Rupture de stock'}</b>{stock>0&&<label>Quantité <div className="qty-box"><button onClick={()=>setQty(q=>Math.max(1,q-1))}><Minus/></button><span>{qty}</span><button onClick={()=>setQty(q=>Math.min(stock,q+1))}><Plus/></button></div></label>}<button className="button cart-button" disabled={adding||stock<=0} onClick={()=>add(false)}><ShoppingCart/> {adding?'Ajout…':'Ajouter au panier'}</button><button className="button buy-button" disabled={adding||stock<=0} onClick={()=>add(true)}>Acheter maintenant</button>{error&&<div className="alert error small-alert">{error}</div>}<div className="buy-details"><span>Paiement</span><b>À la livraison</b><span>Vendu par</span><Link to={`/store/${product.store?.slug}`}>{product.store?.name}</Link></div></aside></section><section className="section-shell product-tabs"><div className="tab-buttons"><button className={tab==='description'?'active':''} onClick={()=>setTab('description')}>Description</button><button className={tab==='delivery'?'active':''} onClick={()=>setTab('delivery')}>Livraison</button><button className={tab==='store'?'active':''} onClick={()=>setTab('store')}>Boutique</button></div><div className="tab-content">{tab==='description'&&<><h2>À propos de cet article</h2><p>{product.description||'Aucune description supplémentaire.'}</p></>}{tab==='delivery'&&<><h2>Livraison One Market V1</h2><p>Indique ton adresse, ton téléphone et tes instructions au checkout. Le paiement est effectué à la livraison.</p></>}{tab==='store'&&<><h2>{product.store?.name}</h2><p>Retrouve les autres articles de cette boutique sur One Market.</p><Link className="button secondary" to={`/store/${product.store?.slug}`}>Voir la boutique</Link></>}</div></section>{related.length>0&&<section className="section-shell related-section"><div className="section-heading"><div><span>Vous aimerez peut-être</span><h2>Produits similaires</h2></div></div><div className="rail-scroll">{related.map(p=><ProductCard key={p.id} product={p}/>)}</div></section>}</main>}
