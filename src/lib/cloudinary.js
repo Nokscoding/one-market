@@ -23,7 +23,6 @@ export async function uploadOneMarketImage(file, { folder = 'one-market/products
   body.append('file', file)
   body.append('upload_preset', CLOUDINARY_UPLOAD_PRESET)
   body.append('asset_folder', folder)
-  body.append('use_asset_folder_as_public_id_prefix', 'true')
   if (tags.length) body.append('tags', tags.join(','))
 
   const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
