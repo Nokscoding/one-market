@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { money } from '../lib/format'
 import ProductQuickView from './ProductQuickView'
+import SmartImage from './SmartImage'
 
 export default function ProductCard({ product }) {
   const [quickView, setQuickView] = useState(false)
@@ -13,8 +14,8 @@ export default function ProductCard({ product }) {
     <>
       <article className="product-card market-product-card">
         <div className="product-media-wrap">
-          <Link to={`/product/${product.id}`} className="product-media">
-            {image ? <img src={image} alt={product.name} loading="lazy" /> : <div className="product-placeholder">OM</div>}
+          <Link to={`/product/${product.id}`} className="product-media" aria-label={`Voir ${product.name}`}>
+            <SmartImage src={image} alt={product.name} fallback="OM" className="product-card-smart-image" fit="contain" />
           </Link>
           <button className="product-quick-button" onClick={() => setQuickView(true)} aria-label={`Aperçu rapide de ${product.name}`}>
             <Eye size={17} />
