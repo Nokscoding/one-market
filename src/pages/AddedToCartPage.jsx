@@ -1,4 +1,4 @@
-import { ArrowRight, CheckCircle2, Minus, Plus, ShoppingBag } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Minus, Plus, ShoppingBag, Zap } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import Loader from '../components/Loader'
@@ -12,13 +12,14 @@ export default function AddedToCartPage() {
   const productId = params.get('product') || ''
   const variantId = params.get('variant') || ''
   const addedQty = Math.max(1, Number(params.get('qty')) || 1)
-  const { items, loading: cartLoading, updateQuantity } = useCart()
+  const { items, count, total: cartTotal, loading: cartLoading, updateQuantity } = useCart()
   const [product, setProduct] = useState(null)
   const [variant, setVariant] = useState(null)
   const [store, setStore] = useState(null)
   const [image, setImage] = useState('')
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
+  const [message, setMessage] = useState('')
 
   useEffect(() => {
     let active = true
@@ -42,7 +43,7 @@ export default function AddedToCartPage() {
       setStore(s || null)
       setImage(images?.[0]?.secure_url || '')
       setVariant(variantResult.data || null)
-    })().finally(() => active && setLoading(false))
+    })().catch(() => {}).finally(() => active && setLoading(false))
 
     return () => { active = false }
   }, [productId, variantId])
@@ -50,13 +51,20 @@ export default function AddedToCartPage() {
   const cartItem = useMemo(() => items.find(item => item.product_id === productId && (item.product_variant_id || '') === variantId), [items, productId, variantId])
   const unitPrice = Number(variant?.price ?? product?.price ?? cartItem?.unitPrice ?? 0)
   const quantity = cartItem?.quantity || addedQty
-  const total = unitPrice * quantity
+  const productTotal = unitPrice * quantity
+  const maxStock = Number(variant?.stock_qty ?? product?.stock_qty ?? cartItem?.availableStock ?? 0)
 
   async function changeQuantity(next) {
-    if (!cartItem || updating) return
+    if (!cartItem || updating || next < 1 || (maxStock > 0 && next > maxStock)) return
+    setMessage('')
     setUpdating(true)
-    try { await updateQuantity(cartItem.id, Math.max(1, next)) }
-    finally { setUpdating(false) }
+    try {
+      await updateQuantity(cartItem.id, next)
+    } catch (error) {
+      setMessage(error?.message || 'Impossible de modifier la quantité.')
+    } finally {
+      setUpdating(false)
+    }
   }
 
   if (loading || cartLoading) return <Loader fullscreen />
@@ -65,13 +73,18 @@ export default function AddedToCartPage() {
     return <main className="section-shell page-space"><div className="purchase-confirm-card"><h1>Produit introuvable</h1><Link className="button primary" to="/catalog">Retour au catalogue</Link></div></main>
   }
 
+  const buyNowParams = new URLSearchParams({ mode: 'buy-now', product: product.id, qty: String(quantity) })
+  if (variantId) buyNowParams.set('variant', variantId)
+
   return (
     <main className="section-shell purchase-confirm-page">
       <div className="purchase-success-title"><CheckCircle2 size={28}/><div><span>Ajouté au panier</span><h1>Votre produit est bien dans le panier</h1></div></div>
 
+      {message && <div className="cart-feedback">{message}</div>}
+
       <div className="purchase-confirm-layout">
         <section className="purchase-confirm-card purchase-confirm-product">
-          <SmartImage src={image} alt={product.name} fallback="OM" fit="contain" className="purchase-confirm-image" widthHint={360} />
+          <SmartImage src={image} alt={product.name} fallback="OM" fit="contain" className="purchase-confirm-image" widthHint={360}/>
           <div className="purchase-confirm-info">
             <span className="eyebrow">{store?.name || 'One Market'}</span>
             <h2>{product.name}</h2>
@@ -82,19 +95,23 @@ export default function AddedToCartPage() {
               <div className="qty-control small">
                 <button disabled={updating || quantity <= 1} onClick={() => changeQuantity(quantity - 1)}><Minus size={14}/></button>
                 <span>{quantity}</span>
-                <button disabled={updating} onClick={() => changeQuantity(quantity + 1)}><Plus size={14}/></button>
+                <button disabled={updating || quantity >= maxStock} onClick={() => changeQuantity(quantity + 1)}><Plus size={14}/></button>
               </div>
             </div>
+            <small className="purchase-stock-note">{maxStock > 0 ? `${maxStock} unité${maxStock > 1 ? 's' : ''} disponible${maxStock > 1 ? 's' : ''}` : 'Stock indisponible'}</small>
           </div>
         </section>
 
         <aside className="purchase-confirm-card purchase-confirm-summary">
           <span>Résumé</span>
           <div><span>Quantité ajoutée</span><b>{addedQty}</b></div>
-          <div><span>Quantité totale</span><b>{quantity}</b></div>
-          <div className="purchase-confirm-total"><span>Total produit</span><strong>{money(total, product.currency)}</strong></div>
+          <div><span>Total de ce produit</span><b>{money(productTotal, product.currency)}</b></div>
+          <div><span>Articles dans le panier</span><b>{count}</b></div>
+          <div className="purchase-confirm-total"><span>Total du panier</span><strong>{money(cartTotal, 'USD')}</strong></div>
+
           <div className="purchase-confirm-actions">
-            <Link className="button primary full" to="/checkout">Commander le panier <ArrowRight size={17}/></Link>
+            <Link className="button buy-now-button full" to={`/checkout?${buyNowParams.toString()}`}><Zap size={17}/> Acheter ce produit maintenant</Link>
+            <Link className="button primary full" to="/checkout">Commander tout le panier <ArrowRight size={17}/></Link>
             <Link className="button secondary full" to="/cart"><ShoppingBag size={17}/> Voir le panier</Link>
             <Link className="purchase-continue-link" to="/catalog">Continuer mes achats</Link>
           </div>
