@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom'
 import EmptyState from '../components/EmptyState'
 import Loader from '../components/Loader'
 import ProductCard from '../components/ProductCard'
+import ReportProblem from '../components/ReportProblem'
 import SmartImage from '../components/SmartImage'
 import StoreTrustBadge from '../components/StoreTrustBadge'
 import { publicSocialLinks } from '../lib/seller'
@@ -80,6 +81,7 @@ export default function StorePage() {
             <p>{store.description || 'Découvrez les produits proposés par cette boutique sur One Market.'}</p>
             <div className="store-public-meta"><span><MapPin size={15}/>{store.city ? `${store.city}, ` : ''}RDC</span>{categoryName && <span>{categoryName}</span>}{rating.count > 0 && <span><Star size={15}/>{rating.value.toFixed(1)} · {rating.count} avis produit{rating.count > 1 ? 's' : ''}</span>}{store.phone && <span><Phone size={15}/>{store.phone}</span>}</div>
             {socials.length > 0 && <div className="store-social-links">{socials.map(item => <a key={item.label} href={item.href} target="_blank" rel="noreferrer">{item.label}<ExternalLink size={13}/></a>)}</div>}
+            <div className="store-report-row"><ReportProblem source="store_page" store={store} orderItems={products.map(product => ({ product_id: product.id, product_name: product.name, store_id: store.id }))}/></div>
           </div>
         </div>
       </section>
