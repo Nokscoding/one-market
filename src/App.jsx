@@ -3,6 +3,7 @@ import { Link, Route, Routes, useLocation } from 'react-router-dom'
 import AccountSellerGateway from './components/AccountSellerGateway'
 import Footer from './components/Footer'
 import Header from './components/Header'
+import NotificationPermissionPrompt from './components/NotificationPermissionPrompt'
 import SiteIntro from './components/SiteIntro'
 import ProtectedRoute from './components/ProtectedRoute'
 import AuthPage from './pages/AuthPage'
@@ -34,7 +35,6 @@ export default function App() {
   useEffect(() => {
     const leaveTimer = window.setTimeout(() => setIntroLeaving(true), 1600)
     const removeTimer = window.setTimeout(() => setIntroVisible(false), 2260)
-
     return () => {
       window.clearTimeout(leaveTimer)
       window.clearTimeout(removeTimer)
@@ -44,7 +44,6 @@ export default function App() {
   useEffect(() => {
     document.documentElement.classList.toggle('site-intro-lock', introVisible)
     document.body.classList.toggle('site-intro-lock', introVisible)
-
     return () => {
       document.documentElement.classList.remove('site-intro-lock')
       document.body.classList.remove('site-intro-lock')
@@ -58,7 +57,6 @@ export default function App() {
   return (
     <div className="app">
       {introVisible && <SiteIntro leaving={introLeaving} />}
-
       {!standalonePage && <Header />}
       {sellerPage && <Link className="seller-return-site" to="/">← Retourner sur One Market</Link>}
 
@@ -83,6 +81,7 @@ export default function App() {
       </div>
 
       {!standalonePage && <Footer />}
+      {!introVisible && <NotificationPermissionPrompt />}
     </div>
   )
 }
