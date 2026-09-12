@@ -3,6 +3,7 @@
   publish = "dist"
 
 # One Market production — déploiement automatique depuis la branche main.
+# Rebuild 2026-09-12 après configuration complète des variables Vite.
 # React Router fonctionne côté client. Toutes les routes doivent revenir
 # vers index.html lorsqu'elles sont ouvertes directement dans le navigateur.
 [[redirects]]
