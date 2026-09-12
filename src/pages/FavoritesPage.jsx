@@ -1,5 +1,5 @@
-import { Heart } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import EmptyState from '../components/EmptyState'
 import Loader from '../components/Loader'
 import ProductCard from '../components/ProductCard'
@@ -69,7 +69,11 @@ export default function FavoritesPage() {
       {products.length ? (
         <div className="product-grid">{products.map(product => <ProductCard key={product.id} product={product} />)}</div>
       ) : (
-        <EmptyState title="Aucun favori pour le moment" text="Touchez le cœur sur un produit pour le retrouver ici." icon={<Heart size={24} />} />
+        <EmptyState
+          title="Aucun favori pour le moment"
+          text="Touchez le cœur sur un produit pour le retrouver ici."
+          action={<Link className="button primary" to="/catalog">Découvrir les produits</Link>}
+        />
       )}
     </main>
   )
