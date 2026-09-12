@@ -1,3 +1,13 @@
 import { Link } from 'react-router-dom'
-import Logo from './Logo'
-export default function Footer(){return <footer className="site-footer"><button className="back-top" onClick={()=>window.scrollTo({top:0,behavior:'smooth'})}>Retour en haut</button><div className="section-shell footer-grid"><div><Logo/><p>La marketplace multi-boutiques pensée pour la RDC. Paiement à la livraison en V1.</p></div><div><h4>Acheter</h4><Link to="/catalog">Catalogue</Link><Link to="/stores">Boutiques</Link><Link to="/orders">Mes commandes</Link></div><div><h4>Besoin d'aide ?</h4><Link to="/help">Centre d'aide</Link><Link to="/account">Mon compte</Link><span>Lubumbashi · RDC</span></div><div><h4>One Market</h4><span>Produit par NKS Services</span><span>Plusieurs boutiques.</span><span>Un seul marché.</span></div></div><div className="footer-bottom">© 2026 One Market · NKS Services</div></footer>}
+
+export default function Footer() {
+  return (
+    <footer className="footer">
+      <div className="footer-inner">
+        <div><strong>OneMarket</strong><p>Plusieurs boutiques. Un seul marché.</p></div>
+        <div className="footer-links"><Link to="/catalog">Produits</Link><Link to="/stores">Boutiques</Link><Link to="/account">Mon compte</Link></div>
+        <div className="powered">Powered by <strong>NKS Services</strong></div>
+      </div>
+    </footer>
+  )
+}

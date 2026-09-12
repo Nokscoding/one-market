@@ -1,7 +1,12 @@
-import { MapPin, Search, Store as StoreIcon } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { ArrowRight } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import EmptyState from '../components/EmptyState'
 import Loader from '../components/Loader'
-import { fetchStores } from '../lib/catalog'
-export default function Stores(){const[stores,setStores]=useState([]),[loading,setLoading]=useState(true),[q,setQ]=useState('');useEffect(()=>{fetchStores().then(setStores).finally(()=>setLoading(false))},[]);const shown=useMemo(()=>stores.filter(s=>s.name.toLowerCase().includes(q.toLowerCase())),[stores,q]);if(loading)return <Loader fullscreen/>;return <main className="section-shell page-space"><div className="page-heading"><span className="eyebrow">Vendeurs One Market</span><h1>Nos boutiques</h1><p>Découvrez les boutiques présentes sur One Market en RDC.</p></div><div className="store-search"><Search/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Rechercher une boutique"/></div>{shown.length?<div className="stores-grid">{shown.map(s=><Link className="store-list-card" to={`/store/${s.slug}`} key={s.id}><div className="store-logo-large">{s.logo_url?<img src={s.logo_url} alt={s.name}/>:<StoreIcon/>}</div><div><h3>{s.name}</h3><p>{s.description||'Boutique partenaire One Market.'}</p><span><MapPin size={15}/>{s.city||'RDC'}</span></div></Link>)}</div>:<EmptyState title="Aucune boutique"/>}</main>}
+import { supabase } from '../lib/supabase'
+
+export default function Stores() {
+  const [stores, setStores] = useState([]); const [loading, setLoading] = useState(true)
+  useEffect(() => { supabase.from('stores').select('*').eq('status', 'active').order('name').then(({ data }) => { setStores(data || []); setLoading(false) }) }, [])
+  if (loading) return <Loader fullscreen />
+  return <main className="section-shell page-space"><div className="page-title"><span className="eyebrow">OneMarket</span><h1>Boutiques</h1><p>Une sélection privée de vendeurs approuvés.</p></div><div className="store-directory">{stores.map(store => <Link to={`/store/${store.slug}`} className="store-directory-card" key={store.id}><div className="store-cover">{store.banner_url ? <img src={store.banner_url} alt="" /> : <div className="store-cover-mark" />}</div><div className="store-directory-info">{store.logo_url ? <img className="store-logo" src={store.logo_url} alt="" /> : <div className="store-logo fallback">{store.name.slice(0,2).toUpperCase()}</div>}<div><h3>{store.name}</h3><p>{store.country_code === 'US' ? 'États-Unis' : 'RDC'}{store.city ? ` · ${store.city}` : ''}</p></div><ArrowRight size={19} /></div></Link>)}</div></main>
+}

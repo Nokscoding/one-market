@@ -1,8 +1,36 @@
-import { Search, SlidersHorizontal, X } from 'lucide-react'
+import { Search, SlidersHorizontal } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import EmptyState from '../components/EmptyState'
-import Loader from '../components/Loader'
 import ProductCard from '../components/ProductCard'
-import { fetchCategories, fetchProducts, fetchStores } from '../lib/catalog'
-export default function Catalog(){const [params,setParams]=useSearchParams(); const [products,setProducts]=useState([]),[categories,setCategories]=useState([]),[stores,setStores]=useState([]),[loading,setLoading]=useState(true),[mobileFilters,setMobileFilters]=useState(false); const q=params.get('q')||'', category=params.get('category')||'', store=params.get('store')||'', sort=params.get('sort')||'new', min=Number(params.get('min')||0), max=Number(params.get('max')||0); useEffect(()=>{Promise.all([fetchCategories(),fetchStores()]).then(([c,s])=>{setCategories(c);setStores(s)}).catch(()=>{})},[]); useEffect(()=>{setLoading(true);fetchProducts({q,category,store}).then(setProducts).finally(()=>setLoading(false))},[q,category,store]); const filtered=useMemo(()=>{let list=[...products].filter(p=>(!min||Number(p.price)>=min)&&(!max||Number(p.price)<=max)); if(sort==='price-asc')list.sort((a,b)=>Number(a.price)-Number(b.price)); if(sort==='price-desc')list.sort((a,b)=>Number(b.price)-Number(a.price)); if(sort==='discount')list.sort((a,b)=>(Number(b.old_price||b.price)-Number(b.price))-(Number(a.old_price||a.price)-Number(a.price))); return list},[products,min,max,sort]); function set(key,val){const next=new URLSearchParams(params); if(val)next.set(key,val);else next.delete(key);setParams(next)}; const active=Boolean(category||store||min||max); if(loading)return <Loader fullscreen/>; return <main className="section-shell catalog-page"><div className="catalog-title"><span className="eyebrow">Catalogue</span><h1>{q?<>Résultats pour « {q} »</>:'Découvrez One Market'}</h1><p>{filtered.length} article{filtered.length!==1?'s':''}</p></div><button className="mobile-filter-button" onClick={()=>setMobileFilters(true)}><SlidersHorizontal/> Filtres</button><div className="catalog-layout"><aside className={`catalog-filters ${mobileFilters?'open':''}`}><div className="filters-head"><strong>Filtrer</strong><button onClick={()=>setMobileFilters(false)}><X/></button></div><div className="filter-block"><h4>Catégorie</h4><button className={!category?'active':''} onClick={()=>set('category','')}>Toutes</button>{categories.map(c=><button key={c.id} className={category===c.id?'active':''} onClick={()=>set('category',c.id)}>{c.name}</button>)}</div><div className="filter-block"><h4>Boutique</h4><select value={store} onChange={e=>set('store',e.target.value)}><option value="">Toutes les boutiques</option>{stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></div><div className="filter-block"><h4>Prix (USD)</h4><div className="price-inputs"><input type="number" min="0" placeholder="Min" value={min||''} onChange={e=>set('min',e.target.value)}/><input type="number" min="0" placeholder="Max" value={max||''} onChange={e=>set('max',e.target.value)}/></div></div>{active&&<button className="clear-filters" onClick={()=>{const next=new URLSearchParams(params);['category','store','min','max'].forEach(k=>next.delete(k));setParams(next)}}>Effacer les filtres</button>}</aside><section className="catalog-results"><div className="results-toolbar"><span><Search size={17}/> {filtered.length} résultat{filtered.length!==1?'s':''}</span><label>Trier par <select value={sort} onChange={e=>set('sort',e.target.value)}><option value="new">Nouveautés</option><option value="price-asc">Prix croissant</option><option value="price-desc">Prix décroissant</option><option value="discount">Meilleures remises</option></select></label></div>{filtered.length?<div className="product-grid">{filtered.map(p=><ProductCard key={p.id} product={p}/>)}</div>:<EmptyState title="Aucun produit trouvé" text="Essaie une autre recherche ou retire certains filtres."/>}</section></div></main>}
+import Loader from '../components/Loader'
+import EmptyState from '../components/EmptyState'
+import { supabase } from '../lib/supabase'
+
+export default function Catalog() {
+  const [params, setParams] = useSearchParams()
+  const [products, setProducts] = useState([])
+  const [categories, setCategories] = useState([])
+  const [loading, setLoading] = useState(true)
+  const q = params.get('q') || ''
+  const category = params.get('category') || ''
+  const country = params.get('country') || ''
+  useEffect(() => { supabase.from('categories').select('*').eq('is_active', true).order('sort_order').then(({ data }) => setCategories(data || [])) }, [])
+  useEffect(() => {
+    setLoading(true)
+    let query = supabase.from('products').select('*').eq('is_active', true).order('created_at', { ascending: false })
+    if (q) query = query.ilike('name', `%${q}%`)
+    if (category) query = query.eq('category_id', category)
+    query.then(async ({ data }) => {
+      let list = data || []
+      const productIds = list.map(p => p.id); const storeIds = [...new Set(list.map(p => p.store_id))]
+      const [{ data: images }, { data: stores }] = await Promise.all([productIds.length ? supabase.from('product_images').select('*').in('product_id', productIds).order('sort_order') : Promise.resolve({ data: [] }), storeIds.length ? supabase.from('stores').select('id,name,slug,country_code').in('id', storeIds) : Promise.resolve({ data: [] })])
+      const storeMap = Object.fromEntries((stores || []).map(s => [s.id, s])); const imageMap = {}; (images || []).forEach(i => { if (!imageMap[i.product_id]) imageMap[i.product_id] = i.secure_url })
+      list = list.map(p => ({ ...p, store: storeMap[p.store_id], image: imageMap[p.id] })).filter(p => !country || p.store?.country_code === country)
+      setProducts(list); setLoading(false)
+    })
+  }, [q, category, country])
+  const title = useMemo(() => q ? `Résultats pour « ${q} »` : 'Tous les produits', [q])
+  function setFilter(key, value) { const next = new URLSearchParams(params); if (value) next.set(key, value); else next.delete(key); setParams(next) }
+  if (loading) return <Loader fullscreen />
+  return <main className="section-shell page-space"><div className="page-title"><span className="eyebrow">OneMarket</span><h1>{title}</h1><p>{products.length} produit{products.length > 1 ? 's' : ''}</p></div><div className="catalog-toolbar"><div className="filter-title"><SlidersHorizontal size={18} /> Filtres</div><select value={category} onChange={e => setFilter('category', e.target.value)}><option value="">Toutes les catégories</option>{categories.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}</select><select value={country} onChange={e => setFilter('country', e.target.value)}><option value="">Tous les pays</option><option value="CD">RDC</option><option value="US">États-Unis</option></select>{q && <button className="text-button" onClick={() => setFilter('q', '')}><Search size={16} /> Effacer la recherche</button>}</div>{products.length ? <div className="product-grid">{products.map(p => <ProductCard key={p.id} product={p} />)}</div> : <EmptyState title="Aucun produit trouvé" text="Essaie une autre recherche ou retire certains filtres." />}</main>
+}
