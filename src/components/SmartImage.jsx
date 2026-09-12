@@ -4,13 +4,25 @@ function optimizeImageUrl(src, width = 640) {
   if (!src) return ''
   try {
     const url = new URL(src)
+    const safeWidth = Math.max(120, Math.min(1800, Number(width) || 640))
+
     if (url.hostname === 'images.unsplash.com') {
       url.searchParams.set('auto', 'format')
       url.searchParams.set('fit', 'max')
-      url.searchParams.set('w', String(width))
-      url.searchParams.set('q', width <= 320 ? '68' : width <= 700 ? '74' : '82')
+      url.searchParams.set('w', String(safeWidth))
+      url.searchParams.set('q', safeWidth <= 320 ? '68' : safeWidth <= 700 ? '74' : '82')
       return url.toString()
     }
+
+    if (url.hostname === 'res.cloudinary.com' && url.pathname.includes('/image/upload/')) {
+      const marker = '/image/upload/'
+      const [before, after] = url.pathname.split(marker)
+      if (after && !after.startsWith('f_auto,') && !after.startsWith('q_auto,')) {
+        url.pathname = `${before}${marker}f_auto,q_auto:eco,c_limit,w_${safeWidth}/${after}`
+      }
+      return url.toString()
+    }
+
     return src
   } catch {
     return src
@@ -25,11 +37,13 @@ export default function SmartImage({
   loading = 'lazy',
   fit = 'cover',
   width = 640,
+  widthHint,
   fetchPriority,
 }) {
   const [loaded, setLoaded] = useState(false)
   const [failed, setFailed] = useState(false)
-  const optimizedSrc = useMemo(() => optimizeImageUrl(src, width), [src, width])
+  const requestedWidth = widthHint || width
+  const optimizedSrc = useMemo(() => optimizeImageUrl(src, requestedWidth), [src, requestedWidth])
 
   useEffect(() => {
     setLoaded(false)
