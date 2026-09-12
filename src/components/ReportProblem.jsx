@@ -1,5 +1,5 @@
 import { AlertTriangle, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -11,16 +11,21 @@ const LABELS = {
 }
 
 export default function ReportProblem({ source = 'page', orderId = null, orderNumber = '', product = null, store = null, sellerOrders = [], orderItems = [], className = '' }) {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [open, setOpen] = useState(false)
   const [category, setCategory] = useState(orderId ? 'order' : product ? 'product' : store ? 'store' : 'general')
   const [message, setMessage] = useState('')
+  const [phone, setPhone] = useState(profile?.phone || '')
   const [selectedProduct, setSelectedProduct] = useState(product?.id || '')
   const [selectedStore, setSelectedStore] = useState(store?.id || '')
   const [saving, setSaving] = useState(false)
   const [feedback, setFeedback] = useState('')
+
+  useEffect(() => {
+    if (!phone && profile?.phone) setPhone(profile.phone)
+  }, [profile?.phone, phone])
 
   const stores = useMemo(() => {
     const map = new Map()
@@ -47,7 +52,8 @@ export default function ReportProblem({ source = 'page', orderId = null, orderNu
 
   async function submit(event) {
     event.preventDefault()
-    if (message.trim().length < 10 || saving) return
+    const cleanPhone = phone.trim()
+    if (message.trim().length < 10 || cleanPhone.length < 7 || saving) return
     setSaving(true)
     setFeedback('')
 
@@ -58,6 +64,7 @@ export default function ReportProblem({ source = 'page', orderId = null, orderNu
 
     const payload = {
       user_id: user.id,
+      reporter_phone: cleanPhone,
       category,
       subject: `${LABELS[category] || 'Signalement'}${subjectContext}`.slice(0, 140),
       message: message.trim(),
@@ -71,7 +78,7 @@ export default function ReportProblem({ source = 'page', orderId = null, orderNu
     }
 
     const { error } = await supabase.from('support_tickets').insert(payload)
-    if (error) setFeedback(error.message || 'Impossible d’envoyer le signalement.')
+    if (error) setFeedback(error.message === 'REPORTER_PHONE_REQUIRED' ? 'Ajoutez un numéro de téléphone valide.' : error.message || 'Impossible d’envoyer le signalement.')
     else {
       setFeedback('Signalement envoyé à l’équipe One Market.')
       setMessage('')
@@ -91,11 +98,12 @@ export default function ReportProblem({ source = 'page', orderId = null, orderNu
     {open && <div className="report-modal-backdrop"><form className="report-modal" onSubmit={submit}>
       <div className="report-modal-head"><div><span>Assistance One Market</span><h3>Signaler un problème</h3><p>Votre signalement sera transmis directement à notre équipe.</p></div><button type="button" onClick={() => setOpen(false)}><X size={18}/></button></div>
       <label>Type de problème<select value={category} onChange={event => setCategory(event.target.value)}>{categories.map(value => <option key={value} value={value}>{LABELS[value]}</option>)}</select></label>
+      <label>Numéro de téléphone<input required minLength={7} maxLength={30} value={phone} onChange={event => setPhone(event.target.value)} placeholder="+243…"/></label>
       {category === 'product' && products.length > 0 && <label>Produit concerné<select required value={selectedProduct} onChange={event => setSelectedProduct(event.target.value)}><option value="">Choisir un produit</option>{products.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
       {(category === 'seller' || category === 'store') && stores.length > 0 && <label>Boutique concernée<select required value={selectedStore} onChange={event => setSelectedStore(event.target.value)}><option value="">Choisir une boutique</option>{stores.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
       <label>Décrivez le problème<textarea required minLength={10} maxLength={3000} rows={5} value={message} onChange={event => setMessage(event.target.value)} placeholder="Expliquez ce qui s’est passé…"/></label>
       {feedback && <div className="report-feedback">{feedback}</div>}
-      <div className="report-modal-actions"><button type="button" className="button secondary" onClick={() => setOpen(false)}>Annuler</button><button className="button primary" disabled={saving || message.trim().length < 10}>{saving ? 'Envoi…' : 'Envoyer le signalement'}</button></div>
+      <div className="report-modal-actions"><button type="button" className="button secondary" onClick={() => setOpen(false)}>Annuler</button><button className="button primary" disabled={saving || message.trim().length < 10 || phone.trim().length < 7}>{saving ? 'Envoi…' : 'Envoyer le signalement'}</button></div>
     </form></div>}
   </>
 }
