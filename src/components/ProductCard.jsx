@@ -27,7 +27,7 @@ export default function ProductCard({ product }) {
       <article className="product-card market-product-card">
         <div className="product-media-wrap">
           <Link to={`/product/${product.id}`} className="product-media" aria-label={`Voir ${product.name}`}>
-            <SmartImage src={image} alt={product.name} fallback="OM" className="product-card-smart-image" fit="contain" />
+            <SmartImage src={image} alt={product.name} fallback="OM" className="product-card-smart-image" fit="contain" width={480} />
           </Link>
 
           <div className="product-badges">
