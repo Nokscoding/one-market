@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, Route, Routes, useLocation } from 'react-router-dom'
 import AccountSellerGateway from './components/AccountSellerGateway'
+import CookieConsent from './components/CookieConsent'
 import Footer from './components/Footer'
 import Header from './components/Header'
 import NotificationCenter from './components/NotificationCenter'
@@ -14,6 +15,7 @@ import ChatPage from './pages/ChatPage'
 import CheckoutPage from './pages/CheckoutPage'
 import FavoritesPage from './pages/FavoritesPage'
 import Home from './pages/Home'
+import LegalPage from './pages/LegalPage'
 import OrderPage from './pages/OrderPage'
 import OrdersPage from './pages/OrdersPage'
 import ProductPage from './pages/ProductPage'
@@ -68,6 +70,7 @@ export default function App() {
           <Route path="/stores" element={<Stores />} />
           <Route path="/store/:slug" element={<StorePage />} />
           <Route path="/product/:id" element={<ProductPage />} />
+          <Route path="/legal/:section" element={<LegalPage />} />
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/favorites" element={<Private><FavoritesPage /></Private>} />
           <Route path="/cart" element={<Private><CartPage /></Private>} />
@@ -83,6 +86,7 @@ export default function App() {
 
       {!standalonePage && <Footer />}
       {!introVisible && <NotificationPermissionPrompt />}
+      {!introVisible && !sellerPage && <CookieConsent />}
     </div>
   )
 }
