@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Minus, Plus, ShoppingBag, Store } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Minus, Plus, ShoppingBag, Store, Zap } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import Loader from '../components/Loader'
@@ -74,14 +74,47 @@ export default function ProductPage() {
     setSelectedImage(index => (index + direction + imageUrls.length) % imageUrls.length)
   }
 
-  async function add() {
+  function validatePurchase() {
     setError('')
+    if (product?.has_variants && !variantId) {
+      setError('Choisis une variante.')
+      return false
+    }
+    if (stock <= 0) {
+      setError('Ce produit est actuellement en rupture de stock.')
+      return false
+    }
+    return true
+  }
+
+  async function add() {
     if (!user) return navigate('/auth', { state: { from: `/product/${id}` } })
-    if (product.has_variants && !variantId) return setError('Choisis une variante.')
+    if (!validatePurchase()) return
+
     setAdding(true)
-    try { await addItem(product.id, variantId || null, qty); navigate('/cart') }
-    catch (e) { setError(e.message || 'Impossible d’ajouter au panier.') }
-    finally { setAdding(false) }
+    try {
+      await addItem(product.id, variantId || null, qty)
+      const query = new URLSearchParams({ product: product.id, qty: String(qty) })
+      if (variantId) query.set('variant', variantId)
+      navigate(`/cart/added?${query.toString()}`)
+    } catch (e) {
+      setError(e.message || 'Impossible d’ajouter au panier.')
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  function buyNow() {
+    if (!user) return navigate('/auth', { state: { from: `/product/${id}` } })
+    if (!validatePurchase()) return
+
+    const query = new URLSearchParams({
+      mode: 'buy-now',
+      product: product.id,
+      qty: String(qty),
+    })
+    if (variantId) query.set('variant', variantId)
+    navigate(`/checkout?${query.toString()}`)
   }
 
   if (loading) return <Loader fullscreen />
@@ -94,14 +127,14 @@ export default function ProductPage() {
       <div className="product-page">
         <section className="product-gallery">
           <div className="gallery-main">
-            <SmartImage src={currentImage} alt={product.name} fallback="OM" className="product-main-smart-image" loading="eager" fit="contain" />
+            <SmartImage src={currentImage} alt={product.name} fallback="OM" className="product-main-smart-image" loading="eager" fit="contain" widthHint={900} />
             {imageUrls.length > 1 && <>
               <button className="gallery-nav gallery-nav-prev" onClick={() => changeImage(-1)} aria-label="Image précédente"><ChevronLeft size={22} /></button>
               <button className="gallery-nav gallery-nav-next" onClick={() => changeImage(1)} aria-label="Image suivante"><ChevronRight size={22} /></button>
               <span className="gallery-image-count">{selectedImage + 1} / {imageUrls.length}</span>
             </>}
           </div>
-          {imageUrls.length > 1 && <div className="thumbs product-thumbs">{imageUrls.map((src, index) => <button key={`${src}-${index}`} className={selectedImage === index ? 'active' : ''} onClick={() => setSelectedImage(index)} aria-label={`Afficher l'image ${index + 1}`}><SmartImage src={src} alt="" fallback="OM" fit="cover" /></button>)}</div>}
+          {imageUrls.length > 1 && <div className="thumbs product-thumbs">{imageUrls.map((src, index) => <button key={`${src}-${index}`} className={selectedImage === index ? 'active' : ''} onClick={() => setSelectedImage(index)} aria-label={`Afficher l'image ${index + 1}`}><SmartImage src={src} alt="" fallback="OM" fit="cover" widthHint={140} /></button>)}</div>}
         </section>
 
         <section className="product-detail">
@@ -110,7 +143,7 @@ export default function ProductPage() {
             <FavoriteButton productId={product.id} className="favorite-button--detail" showLabel />
           </div>
           <h1>{product.name}</h1>
-          {store && <Link to={`/store/${store.slug}`} className="seller-link"><Store size={17} /> {store.name}</Link>}
+          <Link to={`/store/${store.slug}`} className="seller-link"><Store size={17} /> {store.name}</Link>
 
           <div className="product-detail-rating">
             <RatingStars value={rating} count={reviewCount} />
@@ -127,9 +160,17 @@ export default function ProductPage() {
           </div>
 
           {product.has_variants && <div className="field-block"><label>Variante</label><div className="variant-list">{variants.map(v => <button key={v.id} className={variantId === v.id ? 'active' : ''} onClick={() => setVariantId(v.id)}>{Object.values(v.attributes || {}).join(' · ') || 'Option'}</button>)}</div></div>}
-          <div className="purchase-row"><div className="qty-control"><button onClick={() => setQty(q => Math.max(1, q - 1))}><Minus size={16} /></button><span>{qty}</span><button onClick={() => setQty(q => Math.min(Math.max(stock, 1), q + 1))}><Plus size={16} /></button></div><button className="button primary grow" disabled={adding || stock <= 0} onClick={add}><ShoppingBag size={18} /> {stock <= 0 ? 'Rupture de stock' : adding ? 'Ajout…' : 'Ajouter au panier'}</button></div>
+
+          <div className="purchase-row purchase-row--marketplace">
+            <div className="qty-control"><button onClick={() => setQty(q => Math.max(1, q - 1))}><Minus size={16} /></button><span>{qty}</span><button onClick={() => setQty(q => Math.min(Math.max(stock, 1), q + 1))}><Plus size={16} /></button></div>
+            <div className="purchase-main-actions">
+              <button className="button primary grow" disabled={adding || stock <= 0} onClick={add}><ShoppingBag size={18} /> {stock <= 0 ? 'Rupture de stock' : adding ? 'Ajout…' : 'Ajouter au panier'}</button>
+              <button className="button buy-now-button grow" disabled={adding || stock <= 0} onClick={buyNow}><Zap size={18}/> Acheter maintenant</button>
+            </div>
+          </div>
+
           {error && <p className="form-error">{error}</p>}
-          <div className="purchase-note"><strong>Paiement à la livraison</strong><span>Pour la V1 One Market en RDC, le paiement est effectué au moment de la livraison.</span></div>
+          <div className="purchase-note"><strong>Paiement à la livraison</strong><span>Pour la V1 One Market en RDC, le paiement est effectué au moment de la livraison. D’autres moyens de paiement seront ajoutés ensuite.</span></div>
         </section>
       </div>
 
