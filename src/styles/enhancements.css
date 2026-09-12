@@ -1,0 +1,167 @@
+/* One Market — refinements only. Keeps the established visual identity intact. */
+
+:root{
+  --om-navy:#0b1b3b;
+  --om-blue:#1357e6;
+  --om-soft:#f4f6f9;
+  --om-line:#dfe4eb;
+  --om-text:#111827;
+  --om-muted:#687386;
+  --om-shadow-sm:0 8px 24px rgba(12,27,59,.08);
+  --om-shadow-md:0 18px 42px rgba(12,27,59,.14);
+}
+
+/* Page transitions */
+.route-stage{animation:om-page-enter .22s ease both;transform-origin:50% 0}
+@keyframes om-page-enter{from{opacity:.72;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+/* Header/nav polish without changing structure */
+.market-subnav a,.market-subnav button,.market-actions a,.market-location{transition:background-color .18s ease,color .18s ease,border-color .18s ease,transform .18s ease}
+.market-subnav a:hover,.market-subnav button:hover{background:rgba(255,255,255,.08)}
+.market-actions a:hover,.market-location:hover{transform:translateY(-1px)}
+.market-search{transition:box-shadow .18s ease,border-color .18s ease}
+.market-search:focus-within{box-shadow:0 0 0 3px rgba(19,87,230,.16)}
+
+/* Homepage panels */
+.market-panel{transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}
+.market-panel:hover{transform:translateY(-3px);box-shadow:var(--om-shadow-sm);border-color:#d4dae3}
+.mini-product{transition:transform .2s ease}
+.mini-product:hover{transform:translateY(-2px)}
+.mini-product-image{overflow:hidden}
+.mini-product-image img{transition:transform .3s ease}
+.mini-product:hover .mini-product-image img{transform:scale(1.035)}
+
+/* Product cards */
+.market-product-card{
+  background:#fff;
+  border:1px solid var(--om-line);
+  border-radius:14px;
+  overflow:hidden;
+  position:relative;
+  transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease;
+}
+.market-product-card:hover{transform:translateY(-4px);box-shadow:var(--om-shadow-md);border-color:#d3dae4}
+.product-media-wrap{position:relative;overflow:hidden;background:#f5f6f8}
+.market-product-card .product-media{display:block;border-radius:0;background:#f5f6f8}
+.market-product-card .product-media img{transition:transform .32s ease,filter .32s ease}
+.market-product-card:hover .product-media img{transform:scale(1.035)}
+.market-product-card .product-info{padding:14px 14px 16px}
+.market-product-card .product-name{font-size:.96rem;line-height:1.35;color:var(--om-text);margin-top:7px;min-height:2.6em}
+.market-product-card .product-price{font-size:1.04rem;color:var(--om-navy);margin-top:10px}
+.market-product-card .product-store-line{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.market-product-card .product-store{font-size:.77rem;color:var(--om-muted)}
+.market-product-card .product-store-line>span{font-size:.66rem;font-weight:800;letter-spacing:.08em;color:#6b7280;background:#f0f2f5;border-radius:999px;padding:4px 7px}
+.product-quick-button{
+  position:absolute;
+  right:10px;
+  bottom:10px;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  min-height:34px;
+  padding:0 10px;
+  border:1px solid rgba(255,255,255,.8);
+  border-radius:9px;
+  background:rgba(255,255,255,.94);
+  color:var(--om-navy);
+  font-size:.75rem;
+  font-weight:750;
+  box-shadow:0 8px 20px rgba(12,27,59,.15);
+  opacity:0;
+  transform:translateY(6px);
+  transition:opacity .18s ease,transform .18s ease,background .18s ease;
+}
+.market-product-card:hover .product-quick-button,.product-quick-button:focus-visible{opacity:1;transform:none}
+.product-quick-button:hover{background:#fff}
+
+/* Quick view */
+.quick-view-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:300;
+  display:grid;
+  place-items:center;
+  padding:24px;
+  background:rgba(4,12,28,.62);
+  backdrop-filter:blur(5px);
+  animation:om-fade .18s ease both;
+}
+.quick-view-modal{
+  width:min(820px,100%);
+  max-height:min(680px,92vh);
+  overflow:auto;
+  position:relative;
+  display:grid;
+  grid-template-columns:minmax(280px,.95fr) 1.05fr;
+  background:#fff;
+  border-radius:18px;
+  box-shadow:0 28px 80px rgba(0,0,0,.28);
+  animation:om-modal-in .22s ease both;
+}
+.quick-view-close{
+  position:absolute;
+  top:14px;
+  right:14px;
+  z-index:2;
+  width:38px;
+  height:38px;
+  display:grid;
+  place-items:center;
+  border:1px solid var(--om-line);
+  border-radius:50%;
+  background:#fff;
+  color:var(--om-navy);
+  box-shadow:0 6px 18px rgba(12,27,59,.08);
+}
+.quick-view-image{min-height:430px;background:#f3f5f8;display:grid;place-items:center;overflow:hidden;border-radius:18px 0 0 18px}
+.quick-view-image img{width:100%;height:100%;object-fit:cover}
+.quick-view-content{padding:42px 38px 34px;display:flex;flex-direction:column;align-items:flex-start}
+.quick-view-kicker{font-size:.7rem;font-weight:850;letter-spacing:.14em;color:var(--om-blue);margin-bottom:10px}
+.quick-view-content h2{font-size:clamp(1.65rem,3vw,2.35rem);line-height:1.08;color:var(--om-navy);margin-bottom:12px}
+.quick-view-store{display:inline-flex;align-items:center;gap:6px;color:var(--om-muted);font-size:.86rem;margin-bottom:22px}
+.quick-view-price{font-size:1.7rem;color:var(--om-navy);margin-bottom:18px}
+.quick-view-content>p{color:var(--om-muted);line-height:1.65;margin-bottom:22px}
+.quick-view-delivery{display:flex;align-items:flex-start;gap:10px;width:100%;padding:13px 14px;border-radius:11px;background:#f5f8ff;color:var(--om-navy);margin-bottom:20px}
+.quick-view-delivery span{display:grid;gap:2px}
+.quick-view-delivery small{color:var(--om-muted)}
+.quick-view-link{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 17px;border-radius:10px;background:var(--om-navy);color:#fff;font-weight:750;transition:transform .18s ease,background .18s ease}
+.quick-view-link:hover{background:#102750;transform:translateY(-1px)}
+@keyframes om-fade{from{opacity:0}to{opacity:1}}
+@keyframes om-modal-in{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:none}}
+
+/* Product page subtle refinement */
+.product-page{gap:48px}
+.gallery-main,.product-detail{border-radius:16px}
+.gallery-main{overflow:hidden;background:#f4f6f8;border:1px solid var(--om-line)}
+.gallery-main img{transition:transform .35s ease}
+.gallery-main:hover img{transform:scale(1.02)}
+.product-detail{background:#fff;border:1px solid var(--om-line);padding:28px;box-shadow:0 10px 28px rgba(12,27,59,.06)}
+.variant-list button,.qty-control button,.button{transition:transform .16s ease,box-shadow .16s ease,background-color .16s ease,border-color .16s ease}
+.button:hover:not(:disabled){transform:translateY(-1px)}
+
+/* Loader */
+.om-loader--fullscreen{min-height:calc(100vh - 120px);display:grid;place-items:center;background:linear-gradient(180deg,#fff 0%,#f8f9fb 100%)}
+.om-loader-loop{position:relative;display:grid;place-items:center}
+.om-loader-mark-frame{position:relative;width:120px;height:76px;display:grid;place-items:center;overflow:hidden;border-radius:14px;background:#fff;box-shadow:0 12px 35px rgba(12,27,59,.08);border:1px solid #e8ebef}
+.om-loader-mark{width:86px;max-height:55px;object-fit:contain;animation:om-loader-breathe 1.35s ease-in-out infinite}
+.om-loader-scan{position:absolute;left:12px;right:12px;height:2px;background:linear-gradient(90deg,transparent,var(--om-blue),transparent);animation:om-loader-scan 1.35s ease-in-out infinite}
+@keyframes om-loader-breathe{50%{transform:scale(.965);opacity:.82}}
+@keyframes om-loader-scan{0%{top:20%;opacity:0}30%{opacity:.8}70%{opacity:.8}100%{top:78%;opacity:0}}
+
+/* Focus states */
+.product-quick-button:focus-visible,.quick-view-close:focus-visible,.quick-view-link:focus-visible{outline:3px solid rgba(19,87,230,.25);outline-offset:2px}
+
+@media(max-width:760px){
+  .product-quick-button{opacity:1;transform:none}
+  .quick-view-backdrop{padding:12px}
+  .quick-view-modal{grid-template-columns:1fr;max-height:94vh;border-radius:16px}
+  .quick-view-image{min-height:260px;max-height:320px;border-radius:16px 16px 0 0}
+  .quick-view-content{padding:26px 22px 24px}
+  .quick-view-content h2{font-size:1.7rem}
+  .quick-view-price{font-size:1.45rem}
+  .product-page{gap:24px}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .route-stage,.market-panel,.mini-product,.market-product-card,.product-media img,.quick-view-backdrop,.quick-view-modal,.om-loader-mark,.om-loader-scan{animation:none!important;transition:none!important}
+}
