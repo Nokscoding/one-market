@@ -3,6 +3,7 @@ import { Link, Route, Routes, useLocation } from 'react-router-dom'
 import AccountSellerGateway from './components/AccountSellerGateway'
 import Footer from './components/Footer'
 import Header from './components/Header'
+import NotificationCenter from './components/NotificationCenter'
 import NotificationPermissionPrompt from './components/NotificationPermissionPrompt'
 import SiteIntro from './components/SiteIntro'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -58,7 +59,7 @@ export default function App() {
     <div className="app">
       {introVisible && <SiteIntro leaving={introLeaving} />}
       {!standalonePage && <Header />}
-      {sellerPage && <Link className="seller-return-site" to="/">← Retourner sur One Market</Link>}
+      {sellerPage && <><div className="seller-floating-notifications"><NotificationCenter/></div><Link className="seller-return-site" to="/">← Retourner sur One Market</Link></>}
 
       <div className="route-stage" key={`${location.pathname}${location.search}`}>
         <Routes location={location}>
