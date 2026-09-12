@@ -2,6 +2,7 @@
   command = "npm run build"
   publish = "dist"
 
+# One Market production — déploiement automatique depuis la branche main.
 # React Router fonctionne côté client. Toutes les routes doivent revenir
 # vers index.html lorsqu'elles sont ouvertes directement dans le navigateur.
 [[redirects]]
