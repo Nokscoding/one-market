@@ -10,6 +10,12 @@ import { cdf, deliveryOption } from '../lib/delivery'
 import { dateTime, money, orderStatus, sellerOrderStatus } from '../lib/format'
 import { supabase } from '../lib/supabase'
 
+function whatsappDigits(value) {
+  let digits = String(value || '').replace(/\D/g, '')
+  if (digits.startsWith('0')) digits = `243${digits.slice(1)}`
+  return digits
+}
+
 export default function OrderPage() {
   const { id } = useParams()
   const [order, setOrder] = useState(null)
@@ -17,11 +23,16 @@ export default function OrderPage() {
   const [items, setItems] = useState({})
   const [stores, setStores] = useState({})
   const [conversations, setConversations] = useState({})
+  const [paymentSettings, setPaymentSettings] = useState({ mobile_money_whatsapp: '243995585991', mobile_money_display: '0995585991' })
   const [loading, setLoading] = useState(true)
 
   async function load() {
-    const { data: o } = await supabase.from('orders').select('*').eq('id', id).maybeSingle()
+    const [{ data: o }, { data: paymentConfig }] = await Promise.all([
+      supabase.from('orders').select('*').eq('id', id).maybeSingle(),
+      supabase.from('marketplace_settings').select('value').eq('key', 'payments').maybeSingle(),
+    ])
     setOrder(o || null)
+    if (paymentConfig?.value) setPaymentSettings(current => ({ ...current, ...paymentConfig.value }))
     if (o) {
       const { data: s } = await supabase.from('seller_orders').select('*').eq('order_id', o.id).order('created_at')
       const list = s || []
@@ -56,9 +67,14 @@ export default function OrderPage() {
   if (!order) return <main className="section-shell page-space"><EmptyState title="Commande introuvable"/></main>
 
   const delivery = deliveryOption(order.delivery_method)
-  const paymentLabel = order.payment_status === 'cash_received' ? 'Paiement reçu' : order.payment_status === 'cancelled' ? 'Paiement annulé' : 'À payer au livreur'
+  const mobileMoney = order.payment_method === 'mobile_money'
+  const paymentLabel = mobileMoney
+    ? ({ awaiting_mobile_money: 'Paiement à finaliser', payment_submitted: 'Paiement envoyé, vérification en cours', paid: 'Paiement confirmé', cancelled: 'Paiement annulé' }[order.payment_status] || order.payment_status)
+    : order.payment_status === 'cash_received' ? 'Paiement reçu' : order.payment_status === 'cancelled' ? 'Paiement annulé' : 'À payer au livreur'
   const reportSellerOrders = subs.map(sub => ({ ...sub, store: stores[sub.store_id] })).filter(sub => sub.store)
   const reportItems = Object.values(items).flat()
+  const mobileMoneyNumber = paymentSettings.mobile_money_display || paymentSettings.mobile_money_whatsapp || '0995585991'
+  const mobileMoneyLink = `https://wa.me/${whatsappDigits(paymentSettings.mobile_money_whatsapp || mobileMoneyNumber)}?text=${encodeURIComponent(`Bonjour One Market, je souhaite finaliser le paiement Mobile Money de ma commande ${order.order_number}.`)}`
 
   return (
     <main className="section-shell page-space order-detail-final">
@@ -68,7 +84,7 @@ export default function OrderPage() {
       </div>
 
       <div className={`order-delivery-summary ${delivery.code === 'express' ? 'is-express' : ''}`}><span>{delivery.code === 'express' ? <Zap size={20}/> : <Truck size={20}/>}</span><div><strong>{delivery.label}</strong><small>{delivery.description} · {cdf(order.delivery_fee_cdf ?? delivery.feeCdf)}</small></div><em>{order.logistics_status === 'delivered' ? 'Livrée' : order.logistics_status === 'out_for_delivery' ? 'En route' : 'En cours'}</em></div>
-      <div className="order-payment-summary"><Banknote size={19}/><div><strong>Paiement à la livraison</strong><span>{paymentLabel}. Le règlement se fait directement auprès du livreur à la réception.</span></div></div>
+      {mobileMoney ? <div className="order-payment-summary"><MessageCircle size={19}/><div><strong>Mobile Money</strong><span>{paymentLabel}. One Market finalise le paiement via WhatsApp au {mobileMoneyNumber}.</span>{!['paid','cancelled'].includes(order.payment_status) && <a className="button secondary" href={mobileMoneyLink} target="_blank" rel="noreferrer">Ouvrir WhatsApp</a>}</div></div> : <div className="order-payment-summary"><Banknote size={19}/><div><strong>Paiement à la livraison</strong><span>{paymentLabel}. Le règlement se fait directement auprès du livreur à la réception.</span></div></div>}
       <div className="order-report-row"><ReportProblem source="order_detail" orderId={order.id} orderNumber={order.order_number} sellerOrders={reportSellerOrders} orderItems={reportItems}/></div>
 
       <div className="seller-order-list">{subs.map(sub => {
