@@ -1,4 +1,4 @@
-import { Banknote, Check, Plus, Truck, Zap } from 'lucide-react'
+import { Banknote, Check, MessageCircle, Plus, Truck, Zap } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import Loader from '../components/Loader'
@@ -11,6 +11,19 @@ import { supabase } from '../lib/supabase'
 
 const blank = {
   label: 'Domicile', full_name: '', phone: '', country_code: 'CD', address_line1: '', address_line2: '', district: '', city: 'Lubumbashi', state_region: 'Haut-Katanga', postal_code: '', instructions: '', is_default: false,
+}
+
+const DEFAULT_PAYMENT_SETTINGS = {
+  cod_enabled: true,
+  mobile_money_enabled: false,
+  mobile_money_whatsapp: '243995585991',
+  mobile_money_display: '0995585991',
+}
+
+function whatsappDigits(value) {
+  let digits = String(value || '').replace(/\D/g, '')
+  if (digits.startsWith('0')) digits = `243${digits.slice(1)}`
+  return digits
 }
 
 function checkoutErrorMessage(message) {
@@ -52,8 +65,22 @@ export default function CheckoutPage() {
   const [buyItem, setBuyItem] = useState(null)
   const [selectedDelivery, setSelectedDelivery] = useState(deliveryMethod || 'standard')
   const [deliverySaving, setDeliverySaving] = useState(false)
+  const [paymentSettings, setPaymentSettings] = useState(DEFAULT_PAYMENT_SETTINGS)
+  const [paymentMethod, setPaymentMethod] = useState('cod')
 
   useEffect(() => { setSelectedDelivery(deliveryMethod || 'standard') }, [deliveryMethod])
+
+  useEffect(() => {
+    let active = true
+    supabase.from('marketplace_settings').select('value').eq('key', 'payments').maybeSingle().then(({ data }) => {
+      if (!active || !data?.value) return
+      const next = { ...DEFAULT_PAYMENT_SETTINGS, ...data.value }
+      setPaymentSettings(next)
+      if (!next.cod_enabled && next.mobile_money_enabled) setPaymentMethod('mobile_money')
+      if (!next.mobile_money_enabled && next.cod_enabled) setPaymentMethod('cod')
+    })
+    return () => { active = false }
+  }, [])
 
   useEffect(() => {
     if (!user?.id) return undefined
@@ -97,6 +124,7 @@ export default function CheckoutPage() {
   const checkoutCount = checkoutItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
   const chosenDelivery = deliveryOption(selectedDelivery)
   const displayedDeliveryFee = selectedDelivery === deliveryMethod ? deliveryFeeCdf : chosenDelivery.feeCdf
+  const mobileMoneyNumber = paymentSettings.mobile_money_display || paymentSettings.mobile_money_whatsapp || '0995585991'
 
   async function chooseDelivery(code) {
     if (deliverySaving) return
@@ -109,20 +137,35 @@ export default function CheckoutPage() {
   async function checkout() {
     if (!selected) return setError('Choisis une adresse de livraison.')
     if (!checkoutItems.length) return setError('Aucun article à commander.')
+    if (paymentMethod === 'cod' && !paymentSettings.cod_enabled) return setError('Le paiement à la livraison est momentanément indisponible.')
+    if (paymentMethod === 'mobile_money' && !paymentSettings.mobile_money_enabled) return setError('Le paiement Mobile Money est momentanément indisponible.')
+
+    const whatsappWindow = paymentMethod === 'mobile_money' ? window.open('about:blank', '_blank') : null
     setSubmitting(true); setError('')
 
-    const common = { p_address_id: selected, p_customer_note: customerNote.trim() || null, p_delivery_method: selectedDelivery }
+    const common = { p_address_id: selected, p_customer_note: customerNote.trim() || null, p_delivery_method: selectedDelivery, p_payment_method: paymentMethod }
     const result = buyNowMode
-      ? await supabase.rpc('checkout_buy_now', { ...common, p_product_id: buyProductId, p_product_variant_id: buyVariantId || null, p_quantity: buyQuantity, p_payment_method: 'cod' })
+      ? await supabase.rpc('checkout_buy_now', { ...common, p_product_id: buyProductId, p_product_variant_id: buyVariantId || null, p_quantity: buyQuantity })
       : await supabase.rpc('checkout_cart', common)
 
     if (result.error) {
+      whatsappWindow?.close()
       setError(checkoutErrorMessage(result.error.message))
       setSubmitting(false)
       return
     }
 
     if (!buyNowMode) await refreshCart()
+
+    if (paymentMethod === 'mobile_money') {
+      const { data: order } = await supabase.from('orders').select('order_number').eq('id', result.data).maybeSingle()
+      const orderNumber = order?.order_number || String(result.data).slice(0, 8)
+      const digits = whatsappDigits(paymentSettings.mobile_money_whatsapp || mobileMoneyNumber)
+      const text = encodeURIComponent(`Bonjour One Market, je souhaite finaliser le paiement Mobile Money de ma commande ${orderNumber}. Total produits : ${money(checkoutTotal, 'USD')} + livraison ${cdf(displayedDeliveryFee)}.`)
+      const whatsappUrl = `https://wa.me/${digits}?text=${text}`
+      if (whatsappWindow && !whatsappWindow.closed) whatsappWindow.location.href = whatsappUrl
+    }
+
     navigate(`/orders/${result.data}`)
   }
 
@@ -139,12 +182,15 @@ export default function CheckoutPage() {
 
           <section className="checkout-market-section"><div className="checkout-market-section-head"><span>3</span><div><h2>Livraison</h2><p>Choisissez le service qui vous convient.</p></div></div><div className="checkout-delivery-grid">{DELIVERY_OPTIONS.map(option => <button type="button" disabled={deliverySaving} key={option.code} className={`checkout-delivery-option ${selectedDelivery === option.code ? 'active' : ''}`} onClick={() => chooseDelivery(option.code)}><div className="checkout-delivery-icon">{option.code === 'express' ? <Zap size={21}/> : <Truck size={21}/>}</div><div><strong>{option.label}</strong><span>{option.description}</span></div><b>{cdf(option.feeCdf)}</b><div className="payment-radio">{selectedDelivery === option.code && <Check size={15}/>}</div></button>)}</div></section>
 
-          <section className="checkout-market-section"><div className="checkout-market-section-head"><span>4</span><div><h2>Mode de paiement</h2><p>Le paiement se fait à la réception.</p></div></div><div className="payment-method-grid payment-method-grid--single"><div className="payment-method-card active payment-method-card--static"><div className="payment-method-icon"><Banknote size={24}/></div><div><strong>Paiement à la livraison</strong><span>Payez directement le livreur lorsque vous recevez la commande.</span><small>Aucun paiement en ligne</small></div><div className="payment-radio"><Check size={15}/></div></div></div></section>
+          <section className="checkout-market-section"><div className="checkout-market-section-head"><span>4</span><div><h2>Mode de paiement</h2><p>Choisissez comment régler votre commande.</p></div></div><div className="payment-method-grid">
+            {paymentSettings.cod_enabled && <button type="button" className={`payment-method-card ${paymentMethod === 'cod' ? 'active' : ''}`} onClick={() => setPaymentMethod('cod')}><div className="payment-method-icon"><Banknote size={24}/></div><div><strong>Paiement à la livraison</strong><span>Payez directement le livreur lorsque vous recevez la commande.</span><small>Aucun paiement avant réception</small></div><div className="payment-radio">{paymentMethod === 'cod' && <Check size={15}/>}</div></button>}
+            {paymentSettings.mobile_money_enabled && <button type="button" className={`payment-method-card ${paymentMethod === 'mobile_money' ? 'active' : ''}`} onClick={() => setPaymentMethod('mobile_money')}><div className="payment-method-icon"><MessageCircle size={24}/></div><div><strong>Mobile Money</strong><span>Après confirmation, One Market ouvre WhatsApp pour finaliser le paiement.</span><small>Contact : {mobileMoneyNumber}</small></div><div className="payment-radio">{paymentMethod === 'mobile_money' && <Check size={15}/>}</div></button>}
+          </div></section>
 
           <section className="checkout-market-section checkout-note-section"><div className="checkout-market-section-head"><span>5</span><div><h2>Note pour la commande</h2><p>Facultatif</p></div></div><textarea value={customerNote} onChange={event => setCustomerNote(event.target.value)} maxLength={500} rows={3} placeholder="Ex. Appelez-moi avant la livraison…"/></section>
         </div>
 
-        <aside className="checkout-market-summary"><div className="checkout-summary-head"><Truck size={21}/><div><strong>Résumé de la commande</strong><span>{chosenDelivery.label}</span></div></div><div className="checkout-summary-line"><span>Articles ({checkoutCount})</span><strong>{money(checkoutTotal, 'USD')}</strong></div><div className="checkout-summary-line"><span>Livraison</span><strong>{cdf(displayedDeliveryFee)}</strong></div><div className="checkout-summary-total"><span>Total produits</span><strong>{money(checkoutTotal, 'USD')}</strong></div><div className="checkout-summary-cdf"><span>+ Livraison</span><strong>{cdf(displayedDeliveryFee)}</strong></div><small className="checkout-currency-note">Les produits sont facturés en USD et la livraison en FC.</small>{error && <div className="alert error">{error}</div>}<button className="button primary full checkout-confirm-button" disabled={submitting || !checkoutItems.length || !selected} onClick={checkout}>{submitting ? 'Création de la commande…' : 'Confirmer la commande'}</button><p className="checkout-cod-note"><Banknote size={16}/> Le paiement de la commande se fait directement auprès du livreur à la réception.</p>{!buyNowMode ? <Link className="checkout-back-cart" to="/cart">Retour au panier</Link> : <Link className="checkout-back-cart" to={`/product/${buyProductId}`}>Retour au produit</Link>}</aside>
+        <aside className="checkout-market-summary"><div className="checkout-summary-head"><Truck size={21}/><div><strong>Résumé de la commande</strong><span>{chosenDelivery.label}</span></div></div><div className="checkout-summary-line"><span>Articles ({checkoutCount})</span><strong>{money(checkoutTotal, 'USD')}</strong></div><div className="checkout-summary-line"><span>Livraison</span><strong>{cdf(displayedDeliveryFee)}</strong></div><div className="checkout-summary-total"><span>Total produits</span><strong>{money(checkoutTotal, 'USD')}</strong></div><div className="checkout-summary-cdf"><span>+ Livraison</span><strong>{cdf(displayedDeliveryFee)}</strong></div><small className="checkout-currency-note">Les produits sont facturés en USD et la livraison en FC.</small>{error && <div className="alert error">{error}</div>}<button className="button primary full checkout-confirm-button" disabled={submitting || !checkoutItems.length || !selected} onClick={checkout}>{submitting ? 'Création de la commande…' : paymentMethod === 'mobile_money' ? 'Confirmer et ouvrir WhatsApp' : 'Confirmer la commande'}</button>{paymentMethod === 'mobile_money' ? <p className="checkout-cod-note"><MessageCircle size={16}/> Le paiement Mobile Money sera finalisé avec One Market via WhatsApp au {mobileMoneyNumber}.</p> : <p className="checkout-cod-note"><Banknote size={16}/> Le paiement de la commande se fait directement auprès du livreur à la réception.</p>}{!buyNowMode ? <Link className="checkout-back-cart" to="/cart">Retour au panier</Link> : <Link className="checkout-back-cart" to={`/product/${buyProductId}`}>Retour au produit</Link>}</aside>
       </div>
     </main>
   )
