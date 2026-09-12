@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { SELLER_STATUS } from '../lib/seller'
 import { supabase } from '../lib/supabase'
 import AccountPage from '../pages/AccountPage'
-import SellerApplicationForm from './SellerApplicationForm'
+import SellerApplicationGate from './SellerApplicationGate'
 
 const SELLER_ROLES = new Set(['seller', 'admin', 'global_admin'])
 
@@ -62,7 +62,7 @@ export default function AccountSellerGateway() {
       {applicationOpen && (
         <section className="section-shell account-seller-application-wrap">
           <button className="account-seller-application-close" type="button" onClick={closeApplication} aria-label="Fermer le formulaire vendeur"><X size={19}/></button>
-          <SellerApplicationForm embedded />
+          <SellerApplicationGate embedded />
         </section>
       )}
 
