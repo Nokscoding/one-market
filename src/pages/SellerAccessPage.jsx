@@ -65,15 +65,8 @@ export default function SellerAccessPage() {
     setSaving(true)
     setMessage('')
 
-    const payload = {
-      user_id: user.id,
-      business_name: form.business_name.trim(),
-      phone: form.phone.trim() || null,
-      city: form.city.trim() || 'Lubumbashi',
-      description: form.description.trim() || null,
-    }
-
-    if (!payload.business_name) {
+    const businessName = form.business_name.trim()
+    if (!businessName) {
       setMessage('Indique le nom de ta boutique ou activité.')
       setSaving(false)
       return
@@ -81,13 +74,19 @@ export default function SellerAccessPage() {
 
     try {
       const { data, error } = await withTimeout(
-        supabase.from('seller_applications').insert(payload).select('*').single(),
+        supabase.rpc('submit_seller_application', {
+          p_business_name: businessName,
+          p_phone: form.phone.trim() || null,
+          p_city: form.city.trim() || 'Lubumbashi',
+          p_description: form.description.trim() || null,
+        }),
       )
       if (error) throw error
       setApplication(data)
       setMessage('Demande envoyée. Elle doit maintenant être approuvée par One Market.')
     } catch (error) {
-      setMessage(error?.message || 'Impossible d’envoyer la demande vendeur.')
+      const text = error?.message || 'Impossible d’envoyer la demande vendeur.'
+      setMessage(text === 'AUTH_REQUIRED' ? 'Reconnecte-toi puis réessaie.' : text)
     } finally {
       setSaving(false)
     }
