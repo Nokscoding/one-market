@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Route, Routes, useLocation } from 'react-router-dom'
+import { Link, Route, Routes, useLocation } from 'react-router-dom'
 import AccountSellerGateway from './components/AccountSellerGateway'
 import Footer from './components/Footer'
 import Header from './components/Header'
@@ -60,6 +60,7 @@ export default function App() {
       {introVisible && <SiteIntro leaving={introLeaving} />}
 
       {!standalonePage && <Header />}
+      {sellerPage && <Link className="seller-return-site" to="/">← Retourner sur One Market</Link>}
 
       <div className="route-stage" key={`${location.pathname}${location.search}`}>
         <Routes location={location}>
