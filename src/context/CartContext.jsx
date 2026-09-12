@@ -51,7 +51,7 @@ export function CartProvider({ children }) {
     return created.id
   }, [user?.id])
 
-  const refreshCart = useCallback(async () => {
+  const refreshCart = useCallback(async ({ silent = false } = {}) => {
     if (!user?.id) {
       setCartId(null)
       setItems([])
@@ -59,7 +59,7 @@ export function CartProvider({ children }) {
       return
     }
 
-    setLoading(true)
+    if (!silent) setLoading(true)
     try {
       const activeCartId = await ensureCart()
       const { data: rawItems, error: itemError } = await supabase
@@ -123,7 +123,7 @@ export function CartProvider({ children }) {
         }
       }).filter(item => item.product && item.store))
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [user?.id, ensureCart])
 
@@ -171,30 +171,64 @@ export function CartProvider({ children }) {
     return Number(product.stock_qty) || 0
   }, [])
 
-  const addItem = useCallback(async (productId, productVariantId = null, quantity = 1) => {
+  const addItem = useCallback(async (productId, productVariantId = null, quantity = 1, snapshot = {}) => {
     if (!user?.id) throw new Error('AUTH_REQUIRED')
     const activeCartId = cartId || await ensureCart()
     const normalizedQuantity = Math.max(1, Math.min(99, Number(quantity) || 1))
-    const availableStock = await getAvailableStock(productId, productVariantId)
+    const knownStock = Number(snapshot?.availableStock)
+    const availableStock = Number.isFinite(knownStock) && knownStock >= 0
+      ? knownStock
+      : await getAvailableStock(productId, productVariantId)
     const existing = items.find(item => item.product_id === productId && (item.product_variant_id || null) === (productVariantId || null))
     const desiredQuantity = (existing?.quantity || 0) + normalizedQuantity
 
     if (desiredQuantity > availableStock) throw stockError(availableStock)
 
     if (existing) {
-      const { error } = await supabase.from('cart_items').update({ quantity: desiredQuantity }).eq('id', existing.id)
+      const { error } = await supabase
+        .from('cart_items')
+        .update({ quantity: desiredQuantity })
+        .eq('id', existing.id)
       if (error) throw error
+
+      setItems(current => current.map(item => item.id === existing.id
+        ? { ...item, quantity: desiredQuantity, availableStock, quantityTooHigh: false }
+        : item))
     } else {
-      const { error } = await supabase.from('cart_items').insert({
-        cart_id: activeCartId,
-        product_id: productId,
-        product_variant_id: productVariantId,
-        quantity: normalizedQuantity,
-      })
+      const { data: inserted, error } = await supabase
+        .from('cart_items')
+        .insert({
+          cart_id: activeCartId,
+          product_id: productId,
+          product_variant_id: productVariantId,
+          quantity: normalizedQuantity,
+        })
+        .select('id,created_at')
+        .single()
       if (error) throw error
+
+      if (snapshot?.product && snapshot?.store) {
+        setItems(current => [...current, {
+          id: inserted.id,
+          created_at: inserted.created_at,
+          cart_id: activeCartId,
+          product_id: productId,
+          product_variant_id: productVariantId,
+          quantity: normalizedQuantity,
+          product: snapshot.product,
+          variant: snapshot.variant || null,
+          store: snapshot.store,
+          image: snapshot.image || null,
+          unitPrice: Number(snapshot.unitPrice ?? snapshot.variant?.price ?? snapshot.product?.price ?? 0),
+          availableStock,
+          isAvailable: true,
+          quantityTooHigh: false,
+        }])
+      }
     }
 
-    await refreshCart()
+    // Ne bloque plus la navigation : le panier complet se resynchronise en arrière-plan.
+    refreshCart({ silent: true }).catch(() => {})
   }, [user?.id, cartId, ensureCart, getAvailableStock, items, refreshCart])
 
   const updateQuantity = useCallback(async (id, quantity) => {
