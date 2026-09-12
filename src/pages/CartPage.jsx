@@ -1,14 +1,56 @@
 import { ArrowRight, Minus, Plus, Trash2 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
+import AddedToCartPage from './AddedToCartPage'
 import EmptyState from '../components/EmptyState'
 import Loader from '../components/Loader'
+import SmartImage from '../components/SmartImage'
 import { useCart } from '../context/CartContext'
 import { money } from '../lib/format'
 
 export default function CartPage() {
+  const [params] = useSearchParams()
   const { items, loading, total, updateQuantity, removeItem } = useCart()
+
+  if (params.get('added') === '1') return <AddedToCartPage />
   if (loading) return <Loader fullscreen />
-  if (!items.length) return <main className="section-shell page-space"><EmptyState title="Votre panier est vide" text="Ajoutez des produits de plusieurs boutiques : OneMarket séparera automatiquement les commandes." action={<Link className="button primary" to="/catalog">Découvrir les produits</Link>} /></main>
-  const groups = Object.values(items.reduce((acc, item) => { const key = item.store?.id || 'unknown'; if (!acc[key]) acc[key] = { store: item.store, items: [] }; acc[key].items.push(item); return acc }, {}))
-  return <main className="section-shell page-space"><div className="page-title"><span className="eyebrow">Panier</span><h1>Votre sélection</h1><p>{items.length} ligne{items.length > 1 ? 's' : ''} · {groups.length} boutique{groups.length > 1 ? 's' : ''}</p></div><div className="cart-layout"><div className="cart-groups">{groups.map(group => <section className="cart-group" key={group.store?.id}><div className="cart-group-head"><strong>{group.store?.name || 'Boutique'}</strong><span>{group.store?.country_code === 'US' ? 'USA' : 'RDC'}</span></div>{group.items.map(item => <div className="cart-line" key={item.id}>{item.image ? <img src={item.image} alt="" /> : <div className="cart-image-placeholder">OM</div>}<div className="cart-line-main"><Link to={`/product/${item.product.id}`}>{item.product.name}</Link>{item.variant && <span>{Object.values(item.variant.attributes || {}).join(' · ')}</span>}<strong>{money(item.unitPrice, item.product.currency)}</strong></div><div className="qty-control small"><button onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus size={14} /></button><span>{item.quantity}</span><button onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus size={14} /></button></div><button className="icon-button danger" onClick={() => removeItem(item.id)}><Trash2 size={18} /></button></div>)}</section>)}</div><aside className="summary-card"><h3>Résumé</h3><div><span>Articles</span><strong>{money(total, 'USD')}</strong></div><div><span>Livraison</span><span>Définie avec chaque vendeur</span></div><hr/><div className="summary-total"><span>Total articles</span><strong>{money(total, 'USD')}</strong></div><Link className="button primary full" to="/checkout">Passer la commande <ArrowRight size={18} /></Link><p>Chaque boutique recevra uniquement la partie de la commande qui la concerne.</p></aside></div></main>
+
+  if (!items.length) {
+    return <main className="section-shell page-space"><EmptyState title="Votre panier est vide" text="Ajoutez des produits de plusieurs boutiques : One Market séparera automatiquement les commandes." action={<Link className="button primary" to="/catalog">Découvrir les produits</Link>} /></main>
+  }
+
+  const groups = Object.values(items.reduce((acc, item) => {
+    const key = item.store?.id || 'unknown'
+    if (!acc[key]) acc[key] = { store: item.store, items: [] }
+    acc[key].items.push(item)
+    return acc
+  }, {}))
+
+  return (
+    <main className="section-shell page-space">
+      <div className="page-title"><span className="eyebrow">Panier</span><h1>Votre sélection</h1><p>{items.length} ligne{items.length > 1 ? 's' : ''} · {groups.length} boutique{groups.length > 1 ? 's' : ''}</p></div>
+      <div className="cart-layout">
+        <div className="cart-groups">
+          {groups.map(group => <section className="cart-group" key={group.store?.id}>
+            <div className="cart-group-head"><strong>{group.store?.name || 'Boutique'}</strong><span>RDC</span></div>
+            {group.items.map(item => <div className="cart-line" key={item.id}>
+              <SmartImage src={item.image} alt={item.product.name} fallback="OM" fit="contain" className="cart-line-smart-image" widthHint={180} />
+              <div className="cart-line-main"><Link to={`/product/${item.product.id}`}>{item.product.name}</Link>{item.variant && <span>{Object.values(item.variant.attributes || {}).join(' · ')}</span>}<strong>{money(item.unitPrice, item.product.currency)}</strong></div>
+              <div className="qty-control small"><button onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus size={14} /></button><span>{item.quantity}</span><button onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus size={14} /></button></div>
+              <button className="icon-button danger" onClick={() => removeItem(item.id)}><Trash2 size={18} /></button>
+            </div>)}
+          </section>)}
+        </div>
+
+        <aside className="summary-card">
+          <h3>Résumé</h3>
+          <div><span>Articles</span><strong>{money(total, 'USD')}</strong></div>
+          <div><span>Livraison</span><span>À confirmer</span></div>
+          <hr/>
+          <div className="summary-total"><span>Total articles</span><strong>{money(total, 'USD')}</strong></div>
+          <Link className="button primary full" to="/checkout">Passer la commande <ArrowRight size={18} /></Link>
+          <p>Chaque boutique recevra uniquement la partie de la commande qui la concerne. Paiement à la livraison pour la V1.</p>
+        </aside>
+      </div>
+    </main>
+  )
 }
