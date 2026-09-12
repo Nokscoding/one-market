@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Route, Routes, useLocation } from 'react-router-dom'
+import AccountSellerGateway from './components/AccountSellerGateway'
 import Footer from './components/Footer'
 import Header from './components/Header'
 import SiteIntro from './components/SiteIntro'
 import ProtectedRoute from './components/ProtectedRoute'
-import AccountPage from './pages/AccountPage'
 import AuthPage from './pages/AuthPage'
 import CartPage from './pages/CartPage'
 import Catalog from './pages/Catalog'
@@ -75,7 +75,7 @@ export default function App() {
           <Route path="/orders" element={<Private><OrdersPage /></Private>} />
           <Route path="/orders/:id" element={<Private><OrderPage /></Private>} />
           <Route path="/chat/:id" element={<Private><ChatPage /></Private>} />
-          <Route path="/account" element={<Private><AccountPage /></Private>} />
+          <Route path="/account" element={<Private><AccountSellerGateway /></Private>} />
           <Route path="/seller" element={<Private><SellerEntry /></Private>} />
           <Route path="*" element={<Home />} />
         </Routes>
