@@ -11,7 +11,7 @@ export default function SellerAccessPage() {
   const isSeller = SELLER_ROLES.has(profile?.role)
 
   if (profileLoading) return <Loader fullscreen />
-  if (isSeller) return <SellerWorkspacePage />
+  if (isSeller) return <SellerApplicationGate><SellerWorkspacePage /></SellerApplicationGate>
 
   return (
     <main className="section-shell seller-join-page">
