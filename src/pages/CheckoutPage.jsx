@@ -20,7 +20,15 @@ function checkoutErrorMessage(message) {
     ADDRESS_NOT_FOUND: 'Cette adresse de livraison n’est plus disponible.',
     PRODUCT_UNAVAILABLE: 'Un produit de la commande n’est plus disponible.',
     STORE_UNAVAILABLE: 'Une boutique de la commande n’est plus disponible.',
-  }[message] || message
+    CART_EMPTY: 'Ton panier est vide.',
+    CART_NOT_FOUND: 'Ton panier One Market est indisponible. Actualise la page puis réessaie.',
+    VARIANT_REQUIRED: 'Choisis une variante pour ce produit avant de commander.',
+    VARIANT_UNAVAILABLE: 'La variante sélectionnée n’est plus disponible.',
+    VARIANT_PRODUCT_MISMATCH: 'La variante sélectionnée ne correspond plus à ce produit.',
+    PAYMENT_METHOD_UNAVAILABLE: 'Ce moyen de paiement n’est pas disponible.',
+    RDC_ONLY: 'One Market livre actuellement uniquement en République démocratique du Congo.',
+    AUTH_REQUIRED: 'Ta session a expiré. Reconnecte-toi puis réessaie.',
+  }[message] || 'Impossible de créer la commande. Vérifie les informations puis réessaie.'
 }
 
 export default function CheckoutPage() {
