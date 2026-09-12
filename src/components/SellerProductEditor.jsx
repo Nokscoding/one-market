@@ -188,9 +188,11 @@ export default function SellerProductEditor({ store, categories, product = null,
       const finalStock = activeSavedVariants.length
         ? activeSavedVariants.reduce((sum, variant) => sum + Number(variant.stock_qty || 0), 0)
         : baseStock
-      if (activeSavedVariants.length !== (savedProduct.has_variants ? 1 : 0) || Number(savedProduct.stock_qty) !== finalStock) {
-        const normalized = await supabase.from('products').update({ has_variants: activeSavedVariants.length > 0, stock_qty: finalStock }).eq('id', savedProduct.id).select('*').single()
-        if (!normalized.error) savedProduct = normalized.data
+      const shouldHaveVariants = activeSavedVariants.length > 0
+      if (Boolean(savedProduct.has_variants) !== shouldHaveVariants || Number(savedProduct.stock_qty) !== finalStock) {
+        const normalized = await supabase.from('products').update({ has_variants: shouldHaveVariants, stock_qty: finalStock }).eq('id', savedProduct.id).select('*').single()
+        if (normalized.error) throw normalized.error
+        savedProduct = normalized.data
       }
 
       onSaved?.({ product: savedProduct, images: finalImages, variants: savedVariants })
