@@ -93,10 +93,27 @@ export default function ProductPage() {
 
     setAdding(true)
     try {
-      await addItem(product.id, variantId || null, qty)
+      const snapshot = {
+        product,
+        variant: selectedVariant || null,
+        store,
+        image: currentImage,
+        unitPrice: Number(price || 0),
+        availableStock: Number(stock || 0),
+      }
+
+      await addItem(product.id, variantId || null, qty, snapshot)
       const query = new URLSearchParams({ added: '1', product: product.id, qty: String(qty) })
       if (variantId) query.set('variant', variantId)
-      navigate(`/cart?${query.toString()}`)
+
+      navigate(`/cart?${query.toString()}`, {
+        state: {
+          addedProduct: {
+            ...snapshot,
+            quantity: qty,
+          },
+        },
+      })
     } catch (e) {
       setError(e.message || 'Impossible d’ajouter au panier.')
     } finally {
