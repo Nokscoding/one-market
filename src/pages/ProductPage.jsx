@@ -38,16 +38,16 @@ export default function ProductPage() {
     async function load() {
       setLoading(true)
       setSelectedImage(0)
-      const productResult = await supabase.from('products').select('*').eq('id', id).eq('is_active', true).maybeSingle()
+      const productResult = await supabase.from('products').select('id,store_id,category_id,name,slug,description,price,old_price,currency,stock_qty,has_variants,is_active,is_demo,created_at,updated_at,rating_avg,rating_count').eq('id', id).eq('is_active', true).maybeSingle()
       if (productResult.error) throw productResult.error
       if (!active) return
       const p = productResult.data
       setProduct(p || null)
       if (p) {
         const [storeResult, imageResult, variantResult] = await Promise.all([
-          supabase.from('stores').select('*').eq('id', p.store_id).eq('country_code', 'CD').eq('status', 'active').maybeSingle(),
-          supabase.from('product_images').select('*').eq('product_id', p.id).order('sort_order'),
-          supabase.from('product_variants').select('*').eq('product_id', p.id).eq('is_active', true).order('created_at'),
+          supabase.from('stores').select('id,owner_id,name,slug,description,logo_url,banner_url,country_code,city,currency,status,primary_category_id,phone,website_url,instagram_url,tiktok_url,facebook_url,linkedin_url,whatsapp_business,is_verified,is_partner').eq('id', p.store_id).eq('country_code', 'CD').eq('status', 'active').maybeSingle(),
+          supabase.from('product_images').select('id,product_id,secure_url,alt_text,sort_order,created_at').eq('product_id', p.id).order('sort_order'),
+          supabase.from('product_variants').select('id,product_id,sku,attributes,price,stock_qty,is_active,created_at').eq('product_id', p.id).eq('is_active', true).order('created_at'),
         ])
         if (storeResult.error) throw storeResult.error
         if (imageResult.error) throw imageResult.error
