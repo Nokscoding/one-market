@@ -162,7 +162,7 @@ export default function CheckoutPage() {
         if (resetResult.error) throw resetResult.error
       }
       if (!addresses.length) payload.is_default = true
-      const result = await supabase.from('addresses').insert(payload).select('*').single()
+      const result = await supabase.from('addresses').insert(payload).select('id,customer_id,address_type,label,full_name,phone,whatsapp_phone,country_code,address_line1,address_line2,district,city,state_region,postal_code,instructions,is_default,building,apartment,landmark,latitude,longitude,created_at,updated_at').single()
       if (result.error) throw result.error
       setAddresses(current => [result.data, ...current.map(address => payload.is_default ? { ...address, is_default: false } : address)])
       setSelected(result.data.id)
