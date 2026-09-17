@@ -9,6 +9,7 @@ import { useCart } from '../context/CartContext'
 import { useFavorites } from '../context/FavoritesContext'
 import { cdf, DELIVERY_OPTIONS, ONE_MARKET_PLUS } from '../lib/delivery'
 import { money } from '../lib/format'
+import { logTechnicalError, userError } from '../lib/userErrors'
 
 export default function CartPage() {
   const [params] = useSearchParams()
@@ -37,7 +38,10 @@ export default function CartPage() {
     if (busyId) return
     setMessage(''); setBusyId(item.id)
     try { await updateQuantity(item.id, nextQuantity) }
-    catch (error) { setMessage(error?.message || 'Impossible de modifier cette quantité.') }
+    catch (error) {
+      logTechnicalError('cart-quantity', error)
+      setMessage(userError(error, 'cart'))
+    }
     finally { setBusyId('') }
   }
 
@@ -48,7 +52,10 @@ export default function CartPage() {
       if (!isFavorite(item.product.id)) await toggleFavorite(item.product.id)
       await removeItem(item.id)
       setMessage('Produit déplacé dans vos favoris.')
-    } catch (error) { setMessage(error?.message || 'Impossible de déplacer ce produit.') }
+    } catch (error) {
+      logTechnicalError('cart-move-favorite', error)
+      setMessage(userError(error, 'cart'))
+    }
     finally { setBusyId('') }
   }
 
@@ -56,7 +63,10 @@ export default function CartPage() {
     if (busyId) return
     setMessage(''); setBusyId(item.id)
     try { await removeItem(item.id) }
-    catch (error) { setMessage(error?.message || 'Impossible de supprimer ce produit.') }
+    catch (error) {
+      logTechnicalError('cart-delete', error)
+      setMessage(userError(error, 'cart'))
+    }
     finally { setBusyId('') }
   }
 
@@ -68,14 +78,20 @@ export default function CartPage() {
     }
     setMessage('')
     try { await clearCart() }
-    catch (error) { setMessage(error?.message || 'Impossible de vider le panier.') }
+    catch (error) {
+      logTechnicalError('cart-clear', error)
+      setMessage(userError(error, 'cart'))
+    }
   }
 
   async function chooseDelivery(code) {
     if (deliverySaving || code === deliveryMethod) return
     setDeliverySaving(true); setMessage('')
     try { await setDeliveryMethod(code) }
-    catch (error) { setMessage(error?.message || 'Impossible de modifier la livraison.') }
+    catch (error) {
+      logTechnicalError('cart-delivery', error)
+      setMessage(userError(error, 'delivery'))
+    }
     finally { setDeliverySaving(false) }
   }
 
