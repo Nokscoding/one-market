@@ -164,8 +164,8 @@ export default function AccountPage() {
     try {
       const payload = addressPayload(addressForm, user.id)
       const result = editingAddressId
-        ? await supabase.from('addresses').update(payload).eq('id', editingAddressId).eq('customer_id', user.id).select('*').single()
-        : await supabase.from('addresses').insert({ ...payload, is_default: addresses.length ? payload.is_default : true }).select('*').single()
+        ? await supabase.from('addresses').update(payload).eq('id', editingAddressId).eq('customer_id', user.id).select('id,customer_id,address_type,label,full_name,phone,whatsapp_phone,country_code,address_line1,address_line2,district,city,state_region,postal_code,instructions,is_default,building,apartment,landmark,latitude,longitude,created_at,updated_at').single()
+        : await supabase.from('addresses').insert({ ...payload, is_default: addresses.length ? payload.is_default : true }).select('id,customer_id,address_type,label,full_name,phone,whatsapp_phone,country_code,address_line1,address_line2,district,city,state_region,postal_code,instructions,is_default,building,apartment,landmark,latitude,longitude,created_at,updated_at').single()
       if (result.error) throw result.error
       await loadDashboard()
       setAddressOpen(false)
@@ -243,7 +243,7 @@ export default function AccountPage() {
     setSavingTicket(true)
     try {
       const payload = { user_id: user.id, category: ticketForm.category, subject: ticketForm.subject.trim(), message: ticketForm.message.trim(), order_id: ticketForm.order_id || null }
-      const { data, error } = await supabase.from('support_tickets').insert(payload).select('*').single()
+      const { data, error } = await supabase.from('support_tickets').insert(payload).select('id,ticket_number,user_id,category,subject,message,status,priority,source,target_type,order_id,store_id,product_id,seller_order_id,reporter_phone,created_at,updated_at').single()
       if (error) throw error
       setTickets(current => [data, ...current])
       setTicketForm(EMPTY_TICKET)
