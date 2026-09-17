@@ -35,7 +35,7 @@ export default function StorePage() {
     async function run() {
       setLoading(true)
       setError('')
-      const storeResult = await supabase.from('stores').select('*').eq('slug', slug).eq('status', 'active').eq('country_code', 'CD').maybeSingle()
+      const storeResult = await supabase.from('stores').select('id,owner_id,name,slug,description,logo_url,banner_url,country_code,city,currency,status,primary_category_id,phone,website_url,instagram_url,tiktok_url,facebook_url,linkedin_url,whatsapp_business,is_verified,is_partner,created_at').eq('slug', slug).eq('status', 'active').eq('country_code', 'CD').maybeSingle()
       if (storeResult.error) throw storeResult.error
       if (!active) return
       const s = storeResult.data || null
@@ -46,13 +46,13 @@ export default function StorePage() {
       if (s) {
         const categoryPromise = s.primary_category_id ? supabase.from('categories').select('name').eq('id', s.primary_category_id).maybeSingle() : Promise.resolve({ data: null, error: null })
         const [productResult, categoryResult] = await Promise.all([
-          supabase.from('products').select('*').eq('store_id', s.id).eq('is_active', true).order('created_at', { ascending: false }),
+          supabase.from('products').select('id,store_id,category_id,name,slug,description,price,old_price,currency,stock_qty,has_variants,is_active,is_demo,created_at,updated_at,rating_avg,rating_count').eq('store_id', s.id).eq('is_active', true).order('created_at', { ascending: false }),
           categoryPromise,
         ])
         if (productResult.error) throw productResult.error
         if (categoryResult.error) throw categoryResult.error
         const ids = (productResult.data || []).map(p => p.id)
-        const imageResult = ids.length ? await supabase.from('product_images').select('*').in('product_id', ids).order('sort_order') : { data: [], error: null }
+        const imageResult = ids.length ? await supabase.from('product_images').select('id,product_id,secure_url,alt_text,sort_order,created_at').in('product_id', ids).order('sort_order') : { data: [], error: null }
         if (imageResult.error) throw imageResult.error
         if (!active) return
         const imageMap = {}
