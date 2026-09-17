@@ -71,7 +71,7 @@ export default function SmartImage({
 
   return (
     <span
-      className={`smart-image ${loaded ? 'is-loaded' : ''} ${!hasImage ? 'is-fallback' : ''} ${className}`.trim()}
+      className={`smart-image ${loaded ? 'is-loaded' : ''} ${hasImage && !loaded ? 'is-loading' : ''} ${!hasImage ? 'is-fallback' : ''} ${className}`.trim()}
       style={{ '--smart-fit': fit }}
     >
       {hasImage && (
@@ -86,7 +86,7 @@ export default function SmartImage({
           onError={handleError}
         />
       )}
-      <span className="smart-image-fallback" aria-hidden={hasImage && loaded ? 'true' : 'false'}>{fallback}</span>
+      {!hasImage && <span className="smart-image-fallback" aria-hidden="true">{fallback}</span>}
       {hasImage && !loaded && <span className="smart-image-shimmer" aria-hidden="true" />}
     </span>
   )
