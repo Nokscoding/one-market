@@ -29,6 +29,7 @@
 @import './styles/reporting.css';
 @import './styles/image-system.css';
 @import './styles/catalog-media-polish.css';
+@import './styles/phase2-polish.css';
 
 .seller-return-site {
   position: fixed;
