@@ -32,9 +32,9 @@ export default function ProductCard({ product, priority = false }) {
               src={image}
               alt={product.name}
               className="product-card-smart-image"
-              fit="contain"
-              width={350}
-              sizes="(max-width: 560px) 46vw, (max-width: 900px) 31vw, (max-width: 1280px) 23vw, 280px"
+              fit="cover"
+              width={420}
+              sizes="(max-width: 560px) 46vw, (max-width: 900px) 31vw, (max-width: 1280px) 23vw, 300px"
               loading={priority ? 'eager' : 'lazy'}
               fetchPriority={priority ? 'high' : undefined}
             />

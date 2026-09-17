@@ -1,0 +1,108 @@
+/* One Market — mobile/catalog media polish.
+   Product listing thumbnails crop cleanly; detail galleries keep the full image. */
+
+.market-product-card .product-media-wrap,
+.market-product-card .product-media,
+.mini-product-image {
+  overflow: hidden;
+  background: #eef1f5;
+}
+
+.market-product-card .product-card-smart-image,
+.mini-product-image .smart-image {
+  --smart-fit: cover !important;
+  padding: 0 !important;
+  background: #eef1f5 !important;
+}
+
+.market-product-card .product-card-smart-image img,
+.mini-product-image .smart-image img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: 50% 50% !important;
+}
+
+/* Keep the advertising carousel in its own stable frame so it never collapses
+   into the hero or the cards below it. */
+.home-promo-carousel {
+  position: relative;
+  isolation: isolate;
+  display: block !important;
+  width: 100%;
+  margin-top: 14px;
+  margin-bottom: 18px;
+  clear: both;
+}
+
+.home-promo-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 5;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.home-promo-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.home-promo-slide {
+  flex: 0 0 100%;
+  width: 100%;
+  min-width: 100%;
+  height: 100%;
+  aspect-ratio: auto !important;
+}
+
+.home-promo-slide > a,
+.home-promo-media,
+.home-promo-slide .smart-image,
+.home-promo-slide img,
+.home-promo-slide video {
+  width: 100%;
+  height: 100%;
+}
+
+.home-promo-carousel + .market-hero-wrap {
+  position: relative;
+  z-index: 0;
+  margin-top: 0;
+}
+
+/* Mobile search has one deliberate search action, not two magnifiers. */
+.mobile-market-search {
+  position: relative;
+}
+
+.mobile-market-search .mobile-search-leading {
+  display: none !important;
+}
+
+.mobile-market-search input {
+  padding-left: 16px !important;
+}
+
+@media (max-width: 760px) {
+  .home-promo-carousel.section-shell {
+    width: 100%;
+    max-width: none;
+    padding-left: 0;
+    padding-right: 0;
+    margin-top: 10px;
+    margin-bottom: 14px;
+  }
+
+  .home-promo-stage {
+    aspect-ratio: 3 / 2;
+    border-radius: 0;
+  }
+
+  .market-product-card .product-media-wrap,
+  .market-product-card .product-media,
+  .mini-product-image {
+    background: #f2f4f7;
+  }
+}
