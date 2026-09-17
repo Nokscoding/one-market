@@ -6,12 +6,15 @@ import Loader from '../components/Loader'
 import ProductCard from '../components/ProductCard'
 import SmartImage from '../components/SmartImage'
 import { supabase } from '../lib/supabase'
+import { logTechnicalError, userError } from '../lib/userErrors'
 
 export default function Catalog() {
   const [params, setParams] = useSearchParams()
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [retryKey, setRetryKey] = useState(0)
 
   const q = params.get('q') || ''
   const category = params.get('category') || ''
@@ -20,35 +23,46 @@ export default function Catalog() {
 
   useEffect(() => {
     let active = true
-    supabase.from('categories').select('*').eq('is_active', true).order('sort_order')
-      .then(({ data }) => { if (active) setCategories(data || []) })
-      .catch(() => { if (active) setCategories([]) })
+    ;(async () => {
+      const { data, error: categoryError } = await supabase.from('categories').select('*').eq('is_active', true).order('sort_order')
+      if (categoryError) throw categoryError
+      if (active) setCategories(data || [])
+    })().catch(categoryError => {
+      logTechnicalError('catalog-categories', categoryError)
+      if (active) setCategories([])
+    })
     return () => { active = false }
-  }, [])
+  }, [retryKey])
 
   useEffect(() => {
     let active = true
     setLoading(true)
+    setError('')
 
-    let query = supabase.from('products').select('*').eq('is_active', true).order('created_at', { ascending: false })
-    if (q) query = query.ilike('name', `%${q}%`)
-    if (category) query = query.eq('category_id', category)
+    ;(async () => {
+      let query = supabase.from('products').select('*').eq('is_active', true).order('created_at', { ascending: false })
+      if (q) query = query.ilike('name', `%${q}%`)
+      if (category) query = query.eq('category_id', category)
 
-    query.then(async ({ data }) => {
+      const { data, error: productError } = await query
+      if (productError) throw productError
       if (!active) return
+
       let list = data || []
       const productIds = list.map(p => p.id)
       const storeIds = [...new Set(list.map(p => p.store_id))]
 
-      const [{ data: images }, { data: stores }] = await Promise.all([
-        productIds.length ? supabase.from('product_images').select('*').in('product_id', productIds).order('sort_order') : Promise.resolve({ data: [] }),
-        storeIds.length ? supabase.from('stores').select('id,name,slug,country_code,status,is_verified,is_partner').in('id', storeIds).eq('country_code', 'CD').eq('status', 'active') : Promise.resolve({ data: [] }),
+      const [imageResult, storeResult] = await Promise.all([
+        productIds.length ? supabase.from('product_images').select('*').in('product_id', productIds).order('sort_order') : Promise.resolve({ data: [], error: null }),
+        storeIds.length ? supabase.from('stores').select('id,name,slug,country_code,status,is_verified,is_partner').in('id', storeIds).eq('country_code', 'CD').eq('status', 'active') : Promise.resolve({ data: [], error: null }),
       ])
-
+      if (imageResult.error) throw imageResult.error
+      if (storeResult.error) throw storeResult.error
       if (!active) return
-      const storeMap = Object.fromEntries((stores || []).map(s => [s.id, s]))
+
+      const storeMap = Object.fromEntries((storeResult.data || []).map(s => [s.id, s]))
       const imageMap = {}
-      ;(images || []).forEach(i => { if (!imageMap[i.product_id] && i.secure_url) imageMap[i.product_id] = i.secure_url })
+      ;(imageResult.data || []).forEach(i => { if (!imageMap[i.product_id] && i.secure_url) imageMap[i.product_id] = i.secure_url })
 
       list = list.map(p => ({ ...p, store: storeMap[p.store_id], image: imageMap[p.id] })).filter(p => p.store)
       if (view === 'new') list = list.slice(0, 12)
@@ -59,13 +73,16 @@ export default function Catalog() {
       else list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
       setProducts(list)
-      setLoading(false)
-    }).catch(() => {
-      if (active) { setProducts([]); setLoading(false) }
-    })
+    })().catch(loadError => {
+      logTechnicalError('catalog-load', loadError)
+      if (active) {
+        setProducts([])
+        setError(userError(loadError, 'generic'))
+      }
+    }).finally(() => { if (active) setLoading(false) })
 
     return () => { active = false }
-  }, [q, category, view, sort])
+  }, [q, category, view, sort, retryKey])
 
   const selectedCategory = categories.find(c => c.id === category)
   const title = useMemo(() => {
@@ -83,6 +100,10 @@ export default function Catalog() {
   }
 
   if (loading) return <Loader fullscreen />
+
+  if (error) {
+    return <main className="section-shell page-space"><EmptyState title="Impossible de charger le catalogue" text={error} action={<button className="button primary" type="button" onClick={() => setRetryKey(value => value + 1)}>Réessayer</button>}/></main>
+  }
 
   if (view === 'categories') {
     return (
