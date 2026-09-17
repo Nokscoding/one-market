@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { deliveryOption } from '../lib/delivery'
 import { supabase } from '../lib/supabase'
+import { logTechnicalError, userError } from '../lib/userErrors'
 import { useAuth } from './AuthContext'
 
 const CartContext = createContext(null)
@@ -8,6 +9,11 @@ const CartContext = createContext(null)
 function stockError(stock) {
   if (stock <= 0) return new Error('Ce produit est en rupture de stock.')
   return new Error(`Stock disponible : ${stock}.`)
+}
+
+function friendlyCartError(error) {
+  logTechnicalError('cart', error)
+  return new Error(userError(error, 'cart'))
 }
 
 export function CartProvider({ children }) {
@@ -18,7 +24,7 @@ export function CartProvider({ children }) {
   const [loading, setLoading] = useState(false)
 
   const ensureCart = useCallback(async () => {
-    if (!user?.id) throw new Error('AUTH_REQUIRED')
+    if (!user?.id) throw friendlyCartError('AUTH_REQUIRED')
 
     const { data: existing, error: selectError } = await supabase
       .from('carts')
@@ -26,7 +32,7 @@ export function CartProvider({ children }) {
       .eq('customer_id', user.id)
       .maybeSingle()
 
-    if (selectError) throw selectError
+    if (selectError) throw friendlyCartError(selectError)
     if (existing?.id) {
       setCartId(existing.id)
       setDeliveryMethodState(existing.delivery_method || 'standard')
@@ -45,7 +51,7 @@ export function CartProvider({ children }) {
         .select('id,delivery_method')
         .eq('customer_id', user.id)
         .maybeSingle()
-      if (retryError || !retry?.id) throw insertError
+      if (retryError || !retry?.id) throw friendlyCartError(insertError)
       setCartId(retry.id)
       setDeliveryMethodState(retry.delivery_method || 'standard')
       return retry.id
@@ -68,8 +74,8 @@ export function CartProvider({ children }) {
     if (!silent) setLoading(true)
     try {
       const activeCartId = await ensureCart()
-      const { data: rawItems, error: itemError } = await supabase.from('cart_items').select('*').eq('cart_id', activeCartId).order('created_at')
-      if (itemError) throw itemError
+      const { data: rawItems, error: itemError } = await supabase.from('cart_items').select('id,cart_id,product_id,product_variant_id,quantity,created_at').eq('cart_id', activeCartId).order('created_at')
+      if (itemError) throw friendlyCartError(itemError)
       if (!rawItems?.length) {
         setItems([])
         return
@@ -77,23 +83,30 @@ export function CartProvider({ children }) {
 
       const productIds = [...new Set(rawItems.map(item => item.product_id))]
       const variantIds = [...new Set(rawItems.map(item => item.product_variant_id).filter(Boolean))]
-      const [{ data: products }, { data: images }, variantResult] = await Promise.all([
-        supabase.from('products').select('*').in('id', productIds),
-        supabase.from('product_images').select('*').in('product_id', productIds).order('sort_order'),
-        variantIds.length ? supabase.from('product_variants').select('*').in('id', variantIds) : Promise.resolve({ data: [] }),
+      const [productResult, imageResult, variantResult] = await Promise.all([
+        supabase.from('products').select('id,store_id,name,price,currency,stock_qty,has_variants,is_active').in('id', productIds),
+        supabase.from('product_images').select('product_id,secure_url,sort_order').in('product_id', productIds).order('sort_order'),
+        variantIds.length ? supabase.from('product_variants').select('id,product_id,price,stock_qty,attributes,is_active').in('id', variantIds) : Promise.resolve({ data: [], error: null }),
       ])
+      if (productResult.error) throw friendlyCartError(productResult.error)
+      if (imageResult.error) throw friendlyCartError(imageResult.error)
+      if (variantResult.error) throw friendlyCartError(variantResult.error)
 
+      const products = productResult.data || []
+      const images = imageResult.data || []
       const variants = variantResult.data || []
-      const storeIds = [...new Set((products || []).map(product => product.store_id))]
-      const { data: stores } = storeIds.length
+      const storeIds = [...new Set(products.map(product => product.store_id))]
+      const storeResult = storeIds.length
         ? await supabase.from('stores').select('id,name,slug,country_code,currency,status').in('id', storeIds).eq('country_code', 'CD')
-        : { data: [] }
+        : { data: [], error: null }
+      if (storeResult.error) throw friendlyCartError(storeResult.error)
+      const stores = storeResult.data || []
 
-      const productMap = Object.fromEntries((products || []).map(product => [product.id, product]))
+      const productMap = Object.fromEntries(products.map(product => [product.id, product]))
       const variantMap = Object.fromEntries(variants.map(variant => [variant.id, variant]))
-      const storeMap = Object.fromEntries((stores || []).map(store => [store.id, store]))
+      const storeMap = Object.fromEntries(stores.map(store => [store.id, store]))
       const firstImage = {}
-      ;(images || []).forEach(image => { if (!firstImage[image.product_id] && image.secure_url) firstImage[image.product_id] = image.secure_url })
+      images.forEach(image => { if (!firstImage[image.product_id] && image.secure_url) firstImage[image.product_id] = image.secure_url })
 
       setItems(rawItems.map(item => {
         const product = productMap[item.product_id]
@@ -120,7 +133,8 @@ export function CartProvider({ children }) {
   }, [user?.id, ensureCart])
 
   useEffect(() => {
-    refreshCart().catch(() => {
+    refreshCart().catch(error => {
+      logTechnicalError('cart.refresh', error)
       setItems([])
       setLoading(false)
     })
@@ -128,25 +142,25 @@ export function CartProvider({ children }) {
 
   const getAvailableStock = useCallback(async (productId, productVariantId = null) => {
     const { data: product, error: productError } = await supabase.from('products').select('id,store_id,stock_qty,has_variants,is_active').eq('id', productId).maybeSingle()
-    if (productError) throw productError
+    if (productError) throw friendlyCartError(productError)
     if (!product?.is_active) throw new Error('Ce produit n’est plus disponible.')
 
     const { data: store, error: storeError } = await supabase.from('stores').select('status,country_code').eq('id', product.store_id).maybeSingle()
-    if (storeError) throw storeError
+    if (storeError) throw friendlyCartError(storeError)
     if (!store || store.status !== 'active' || store.country_code !== 'CD') throw new Error('Cette boutique n’est pas disponible actuellement.')
-    if (product.has_variants && !productVariantId) throw new Error('Choisis une variante avant d’ajouter ce produit.')
+    if (product.has_variants && !productVariantId) throw new Error('Choisissez une option avant d’ajouter ce produit.')
 
     if (productVariantId) {
       const { data: variant, error: variantError } = await supabase.from('product_variants').select('stock_qty,is_active').eq('id', productVariantId).eq('product_id', productId).maybeSingle()
-      if (variantError) throw variantError
-      if (!variant?.is_active) throw new Error('Cette variante n’est plus disponible.')
+      if (variantError) throw friendlyCartError(variantError)
+      if (!variant?.is_active) throw new Error('Cette option n’est plus disponible.')
       return Number(variant.stock_qty) || 0
     }
     return Number(product.stock_qty) || 0
   }, [])
 
   const addItem = useCallback(async (productId, productVariantId = null, quantity = 1, snapshot = {}) => {
-    if (!user?.id) throw new Error('AUTH_REQUIRED')
+    if (!user?.id) throw friendlyCartError('AUTH_REQUIRED')
     const activeCartId = cartId || await ensureCart()
     const normalizedQuantity = Math.max(1, Math.min(99, Number(quantity) || 1))
     const knownStock = Number(snapshot?.availableStock)
@@ -157,11 +171,11 @@ export function CartProvider({ children }) {
 
     if (existing) {
       const { error } = await supabase.from('cart_items').update({ quantity: desiredQuantity }).eq('id', existing.id)
-      if (error) throw error
+      if (error) throw friendlyCartError(error)
       setItems(current => current.map(item => item.id === existing.id ? { ...item, quantity: desiredQuantity, availableStock, quantityTooHigh: false } : item))
     } else {
       const { data: inserted, error } = await supabase.from('cart_items').insert({ cart_id: activeCartId, product_id: productId, product_variant_id: productVariantId, quantity: normalizedQuantity }).select('id,created_at').single()
-      if (error) throw error
+      if (error) throw friendlyCartError(error)
       if (snapshot?.product && snapshot?.store) {
         setItems(current => [...current, {
           id: inserted.id,
@@ -181,7 +195,7 @@ export function CartProvider({ children }) {
         }])
       }
     }
-    refreshCart({ silent: true }).catch(() => {})
+    refreshCart({ silent: true }).catch(error => logTechnicalError('cart.refresh-after-add', error))
   }, [user?.id, cartId, ensureCart, getAvailableStock, items, refreshCart])
 
   const updateQuantity = useCallback(async (id, quantity) => {
@@ -189,7 +203,7 @@ export function CartProvider({ children }) {
     if (!item) return
     if (quantity <= 0) {
       const { error } = await supabase.from('cart_items').delete().eq('id', id)
-      if (error) throw error
+      if (error) throw friendlyCartError(error)
       setItems(current => current.filter(row => row.id !== id))
       return
     }
@@ -198,20 +212,20 @@ export function CartProvider({ children }) {
     const knownStock = Number(item.availableStock || 0)
     if (knownStock > 0 && normalized > knownStock) throw stockError(knownStock)
     const { error } = await supabase.from('cart_items').update({ quantity: normalized }).eq('id', id)
-    if (error) throw error
+    if (error) throw friendlyCartError(error)
     setItems(current => current.map(row => row.id === id ? { ...row, quantity: normalized, quantityTooHigh: false } : row))
   }, [items])
 
   const removeItem = useCallback(async (id) => {
     const { error } = await supabase.from('cart_items').delete().eq('id', id)
-    if (error) throw error
+    if (error) throw friendlyCartError(error)
     setItems(current => current.filter(item => item.id !== id))
   }, [])
 
   const clearCart = useCallback(async () => {
     if (!cartId) return
     const { error } = await supabase.from('cart_items').delete().eq('cart_id', cartId)
-    if (error) throw error
+    if (error) throw friendlyCartError(error)
     setItems([])
   }, [cartId])
 
@@ -221,8 +235,8 @@ export function CartProvider({ children }) {
     setDeliveryMethodState(option.code)
     const { error } = await supabase.from('carts').update({ delivery_method: option.code }).eq('id', activeCartId)
     if (error) {
-      await refreshCart({ silent: true }).catch(() => {})
-      throw error
+      await refreshCart({ silent: true }).catch(refreshError => logTechnicalError('cart.delivery-refresh', refreshError))
+      throw friendlyCartError(error)
     }
   }, [cartId, ensureCart, refreshCart])
 
