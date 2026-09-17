@@ -1,6 +1,7 @@
 import { ImagePlus, Loader2, Trash2 } from 'lucide-react'
 import { useId, useState } from 'react'
-import { cloudinaryCloudName, uploadOneMarketImage } from '../lib/cloudinary'
+import { uploadOneMarketImage } from '../lib/cloudinary'
+import { logTechnicalError, userError } from '../lib/userErrors'
 import SmartImage from './SmartImage'
 
 export default function CloudinaryImageField({
@@ -29,7 +30,8 @@ export default function CloudinaryImageField({
       })
       onChange?.(uploaded.secureUrl, uploaded)
     } catch (uploadError) {
-      setError(uploadError?.message || 'Impossible d’envoyer cette image.')
+      logTechnicalError('image-upload', uploadError)
+      setError(userError(uploadError, 'image'))
     } finally {
       setUploading(false)
     }
@@ -39,7 +41,7 @@ export default function CloudinaryImageField({
     <div className={`cloudinary-image-field ${className}`.trim()}>
       <div className="cloudinary-image-field-head">
         <span>{label}</span>
-        <small>Cloudinary NKS · {cloudinaryCloudName()}</small>
+        <small>Image optimisée pour One Market</small>
       </div>
 
       <div className={`cloudinary-image-picker ${value ? 'has-image' : ''}`}>
@@ -58,7 +60,7 @@ export default function CloudinaryImageField({
       </div>
 
       <input id={inputId} className="cloudinary-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={selectFile} disabled={uploading}/>
-      <small className="cloudinary-image-help">JPG, PNG, WebP ou AVIF · 8 Mo max.</small>
+      <small className="cloudinary-image-help">JPG, PNG, WebP ou AVIF · 8 Mo max. Pour un meilleur rendu, centrez le sujet principal.</small>
       {error && <div className="seller-feedback cloudinary-image-error">{error}</div>}
     </div>
   )
