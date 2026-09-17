@@ -26,7 +26,7 @@ export default function ChatPage() {
   const endRef = useRef(null)
 
   async function loadMessages() {
-    const result = await supabase.from('messages').select('*').eq('conversation_id', id).order('created_at')
+    const result = await supabase.from('messages').select('id,conversation_id,sender_id,order_item_id,content,created_at').eq('conversation_id', id).order('created_at')
     if (result.error) throw result.error
     setMessages(result.data || [])
   }
@@ -37,7 +37,7 @@ export default function ChatPage() {
     setError('')
 
     async function load() {
-      const conversationResult = await supabase.from('conversations').select('*').eq('id', id).maybeSingle()
+      const conversationResult = await supabase.from('conversations').select('id,seller_order_id,customer_id,store_id,created_at,updated_at').eq('id', id).maybeSingle()
       if (conversationResult.error) throw conversationResult.error
       if (!active) return
 
@@ -45,7 +45,7 @@ export default function ChatPage() {
       setConversation(currentConversation)
       if (!currentConversation) return
 
-      const suborderResult = await supabase.from('seller_orders').select('*').eq('id', currentConversation.seller_order_id).maybeSingle()
+      const suborderResult = await supabase.from('seller_orders').select('id,order_id,store_id,seller_order_number,status,subtotal,currency,created_at,updated_at').eq('id', currentConversation.seller_order_id).maybeSingle()
       if (suborderResult.error) throw suborderResult.error
       if (!active) return
 
