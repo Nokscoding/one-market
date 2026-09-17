@@ -44,7 +44,7 @@ export default function CloudinaryImageField({
 
       <div className={`cloudinary-image-picker ${value ? 'has-image' : ''}`}>
         {value ? (
-          <SmartImage src={value} alt={label} fallback="OM" fit={fit} widthHint={480} />
+          <SmartImage src={value} alt={label} fit={fit} widthHint={180} sizes="108px" />
         ) : (
           <div className="cloudinary-image-empty"><ImagePlus size={25}/><span>Aucune image</span></div>
         )}

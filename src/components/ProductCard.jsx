@@ -8,7 +8,7 @@ import RatingStars from './RatingStars'
 import SmartImage from './SmartImage'
 import StoreTrustBadge from './StoreTrustBadge'
 
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, priority = false }) {
   const [quickView, setQuickView] = useState(false)
   const image = product.image || product.product_images?.[0]?.secure_url
   const store = product.store || product.stores
@@ -27,7 +27,18 @@ export default function ProductCard({ product }) {
     <>
       <article className="product-card market-product-card">
         <div className="product-media-wrap">
-          <Link to={`/product/${product.id}`} className="product-media" aria-label={`Voir ${product.name}`}><SmartImage src={image} alt={product.name} fallback="OM" className="product-card-smart-image" fit="contain" width={480}/></Link>
+          <Link to={`/product/${product.id}`} className="product-media" aria-label={`Voir ${product.name}`}>
+            <SmartImage
+              src={image}
+              alt={product.name}
+              className="product-card-smart-image"
+              fit="contain"
+              width={350}
+              sizes="(max-width: 560px) 46vw, (max-width: 900px) 31vw, (max-width: 1280px) 23vw, 280px"
+              loading={priority ? 'eager' : 'lazy'}
+              fetchPriority={priority ? 'high' : undefined}
+            />
+          </Link>
           <div className="product-badges">{discount > 0 && <span className="product-badge product-badge--promo">-{discount}%</span>}{isNew && <span className="product-badge product-badge--new">Nouveau</span>}{isPopular && <span className="product-badge product-badge--popular">Populaire</span>}</div>
           <FavoriteButton productId={product.id} className="favorite-button--card"/>
           <button className="product-quick-button" onClick={() => setQuickView(true)} aria-label={`Aperçu rapide de ${product.name}`}><Eye size={17}/><span>Aperçu</span></button>

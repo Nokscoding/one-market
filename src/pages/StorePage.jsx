@@ -73,9 +73,9 @@ export default function StorePage() {
   return (
     <main className="store-public-final">
       <section className="store-hero">
-        <div className="store-banner"><SmartImage src={store.banner_url} alt={store.name} fallback="ONE MARKET" className="store-page-banner-image" fit="cover" width={1600}/></div>
+        <div className="store-banner"><SmartImage src={store.banner_url} alt={store.name} className="store-page-banner-image" fit="cover" width={900} sizes="100vw" loading="eager" fetchPriority="high"/></div>
         <div className="section-shell store-profile store-profile--final">
-          <SmartImage src={store.logo_url} alt={store.name} fallback={store.name.slice(0,2).toUpperCase()} className="store-profile-smart" fit="contain" width={260}/>
+          <SmartImage src={store.logo_url} alt={store.name} className="store-profile-smart" fit="contain" width={130} sizes="(max-width: 760px) 82px, 104px" loading="eager"/>
           <div className="store-profile-copy">
             <div className="store-profile-title"><h1>{store.name}</h1><StoreTrustBadge store={store}/></div>
             <p>{store.description || 'Découvrez les produits proposés par cette boutique sur One Market.'}</p>

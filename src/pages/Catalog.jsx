@@ -88,7 +88,7 @@ export default function Catalog() {
     return (
       <main className="section-shell page-space">
         <div className="page-title"><span className="eyebrow">Explorer</span><h1>Catégories</h1><p>Choisis un univers pour découvrir les produits disponibles sur One Market.</p></div>
-        {categories.length ? <div className="category-row">{categories.map(c => <Link key={c.id} to={`/catalog?category=${c.id}`} className="category-card"><SmartImage src={c.image_url} alt={c.name} fallback={c.name.slice(0, 1).toUpperCase()} className="category-card-image" fit="cover"/><span>{c.name}</span></Link>)}</div> : <EmptyState title="Aucune catégorie disponible"/>}
+        {categories.length ? <div className="category-row">{categories.map(c => <Link key={c.id} to={`/catalog?category=${c.id}`} className="category-card"><SmartImage src={c.image_url} alt={c.name} className="category-card-image" fit="cover" width={400} sizes="(max-width: 650px) 46vw, (max-width: 1000px) 31vw, 260px"/><span>{c.name}</span></Link>)}</div> : <EmptyState title="Aucune catégorie disponible"/>}
       </main>
     )
   }
@@ -103,7 +103,7 @@ export default function Catalog() {
         {q && <button className="text-button" onClick={() => setFilter('q', '')}><Search size={16}/> Effacer la recherche</button>}
         <div className="catalog-sort"><label htmlFor="catalog-sort">Trier par</label><select id="catalog-sort" value={sort} onChange={e => setFilter('sort', e.target.value)}><option value="newest">Plus récents</option><option value="rating">Mieux notés</option><option value="price_asc">Prix croissant</option><option value="price_desc">Prix décroissant</option></select></div>
       </div>
-      {products.length ? <div className="product-grid">{products.map(p => <ProductCard key={p.id} product={p}/>)}</div> : <EmptyState title="Aucun produit trouvé" text="Essaie une autre recherche ou retire certains filtres."/>}
+      {products.length ? <div className="product-grid">{products.map((p, productIndex) => <ProductCard key={p.id} product={p} priority={productIndex < 4}/>)}</div> : <EmptyState title="Aucun produit trouvé" text="Essaie une autre recherche ou retire certains filtres."/>}
     </main>
   )
 }

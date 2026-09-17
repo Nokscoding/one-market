@@ -116,10 +116,10 @@ export default function ProductPage() {
       <div className="product-page">
         <section className="product-gallery">
           <div className="gallery-main">
-            <SmartImage src={currentImage} alt={product.name} fallback="OM" className="product-main-smart-image" loading="eager" fit="contain" width={900}/>
+            <SmartImage src={currentImage} alt={product.name} className="product-main-smart-image" loading="eager" fetchPriority="high" fit="contain" width={700} sizes="(max-width: 900px) 100vw, 50vw"/>
             {imageUrls.length > 1 && <><button className="gallery-nav gallery-nav-prev" onClick={() => changeImage(-1)} aria-label="Image précédente"><ChevronLeft size={22}/></button><button className="gallery-nav gallery-nav-next" onClick={() => changeImage(1)} aria-label="Image suivante"><ChevronRight size={22}/></button><span className="gallery-image-count">{selectedImage + 1} / {imageUrls.length}</span></>}
           </div>
-          {imageUrls.length > 1 && <div className="thumbs product-thumbs">{imageUrls.map((src, index) => <button key={`${src}-${index}`} className={selectedImage === index ? 'active' : ''} onClick={() => setSelectedImage(index)} aria-label={`Afficher l'image ${index + 1}`}><SmartImage src={src} alt="" fallback="OM" fit="cover" width={140}/></button>)}</div>}
+          {imageUrls.length > 1 && <div className="thumbs product-thumbs">{imageUrls.map((src, index) => <button key={`${src}-${index}`} className={selectedImage === index ? 'active' : ''} onClick={() => setSelectedImage(index)} aria-label={`Afficher l'image ${index + 1}`}><SmartImage src={src} alt="" fit="contain" width={90} sizes="72px"/></button>)}</div>}
         </section>
 
         <section className="product-detail">

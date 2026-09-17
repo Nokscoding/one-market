@@ -27,6 +27,7 @@
 @import './styles/legal-mobile.css';
 @import './styles/account-legal-gate.css';
 @import './styles/reporting.css';
+@import './styles/image-system.css';
 
 .seller-return-site {
   position: fixed;

@@ -45,11 +45,11 @@ export default function Stores() {
       </div>
       {stores.length ? (
         <div className="store-directory">
-          {stores.map(store => (
+          {stores.map((store, storeIndex) => (
             <Link to={`/store/${store.slug}`} className="store-directory-card" key={store.id}>
-              <div className="store-cover"><SmartImage src={store.banner_url} alt={store.name} fallback="OM" className="store-banner-smart" fit="cover"/></div>
+              <div className="store-cover"><SmartImage src={store.banner_url} alt={store.name} className="store-banner-smart" fit="cover" width={500} sizes="(max-width: 760px) 94vw, (max-width: 1100px) 46vw, 380px" loading={storeIndex < 2 ? 'eager' : 'lazy'}/></div>
               <div className="store-directory-info">
-                <SmartImage src={store.logo_url} alt={store.name} fallback={store.name.slice(0,2).toUpperCase()} className="store-logo-smart" fit="contain"/>
+                <SmartImage src={store.logo_url} alt={store.name} className="store-logo-smart" fit="contain" width={90} sizes="64px"/>
                 <div><div className="store-directory-name"><h3>{store.name}</h3><StoreTrustBadge store={store} compact/></div><p>RDC{store.city ? ` · ${store.city}` : ''}</p></div>
                 <ArrowRight size={19}/>
               </div>

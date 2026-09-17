@@ -61,8 +61,8 @@ export default function ProductQuickView({ product, onClose }) {
       <section className="quick-view-modal" role="dialog" aria-modal="true" aria-label={`Aperçu de ${product.name}`} onMouseDown={event => event.stopPropagation()}>
         <button className="quick-view-close" onClick={onClose} aria-label="Fermer l'aperçu"><X size={21}/></button>
         <div className="quick-view-visual">
-          <div className="quick-view-image"><SmartImage src={currentImage} alt={product.name} fallback="OM" loading="eager" fit="contain"/></div>
-          {images.length > 1 && <div className="quick-view-thumbs" aria-label="Images du produit">{images.slice(0, 6).map((src, index) => <button key={`${src}-${index}`} className={selectedImage === index ? 'active' : ''} onClick={() => setSelectedImage(index)} aria-label={`Image ${index + 1}`}><SmartImage src={src} alt="" fallback="OM" fit="cover"/></button>)}</div>}
+          <div className="quick-view-image"><SmartImage src={currentImage} alt={product.name} loading="eager" fetchPriority="high" fit="contain" width={520} sizes="(max-width: 650px) 92vw, 320px"/></div>
+          {images.length > 1 && <div className="quick-view-thumbs" aria-label="Images du produit">{images.slice(0, 6).map((src, index) => <button key={`${src}-${index}`} className={selectedImage === index ? 'active' : ''} onClick={() => setSelectedImage(index)} aria-label={`Image ${index + 1}`}><SmartImage src={src} alt="" fit="contain" width={72} sizes="58px"/></button>)}</div>}
         </div>
         <div className="quick-view-content">
           <span className="quick-view-kicker">APERÇU RAPIDE</span>

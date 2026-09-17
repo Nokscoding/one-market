@@ -1,0 +1,332 @@
+/* One Market — canonical responsive image system.
+   Containers own geometry; SmartImage only fills them. */
+
+:root {
+  --om-image-bg: #f4f6f8;
+  --om-image-bg-soft: #f8f9fb;
+  --om-image-line: rgba(11, 27, 59, .08);
+}
+
+.smart-image {
+  --smart-fit: cover;
+  position: relative;
+  isolation: isolate;
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--om-image-bg);
+  color: #8993a2;
+}
+
+.smart-image::before {
+  content: none;
+}
+
+.smart-image.is-loading::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, #f1f3f6 12%, #f7f8fa 34%, #eef1f4 56%, #f5f6f8 78%);
+  background-size: 220% 100%;
+  animation: om-smart-image-skeleton 1.35s ease-in-out infinite;
+}
+
+.smart-image img {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: var(--smart-fit);
+  object-position: var(--smart-position, 50% 50%);
+  opacity: 0;
+  transition: opacity .18s ease;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+.smart-image.is-loaded::before,
+.smart-image.is-failed::before {
+  content: none;
+  animation: none;
+}
+
+.smart-image.is-loaded img {
+  opacity: 1;
+}
+
+.smart-image-fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  background: var(--om-image-bg-soft);
+  color: #a2aab6;
+}
+
+.smart-image-fallback svg {
+  width: clamp(22px, 18%, 38px);
+  height: auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.35;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: .72;
+}
+
+@keyframes om-smart-image-skeleton {
+  0% { background-position: 100% 0; }
+  100% { background-position: -120% 0; }
+}
+
+/* Product imagery — whole item visible, stable square canvas. */
+.product-media-wrap,
+.market-product-card .product-media,
+.mini-product-image,
+.cart-final-image-link,
+.purchase-confirm-image,
+.checkout-item-image,
+.cart-line-smart-image {
+  min-width: 0;
+  overflow: hidden;
+  background: var(--om-image-bg-soft);
+}
+
+.product-media-wrap,
+.market-product-card .product-media,
+.mini-product-image {
+  aspect-ratio: 1 / 1;
+}
+
+.market-product-card .product-media {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.product-card-smart-image,
+.mini-product-image .smart-image,
+.cart-final-image,
+.purchase-confirm-image,
+.checkout-item-image,
+.cart-line-smart-image {
+  --smart-fit: contain !important;
+}
+
+.product-card-smart-image {
+  padding: clamp(8px, 4.5%, 14px);
+  background: #f7f8fa;
+}
+
+.product-card-smart-image img,
+.cart-final-image img,
+.purchase-confirm-image img,
+.checkout-item-image img,
+.cart-line-smart-image img {
+  object-fit: contain !important;
+}
+
+/* Categories — stable 4:3 crop, no letter placeholders and no min-height hacks. */
+.category-mini-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.panel-category,
+.category-card {
+  min-width: 0;
+}
+
+.panel-category > div,
+.category-card-image {
+  aspect-ratio: 4 / 3;
+  min-height: 0 !important;
+  overflow: hidden;
+  background: var(--om-image-bg);
+}
+
+.panel-category > div {
+  width: 100%;
+  border-radius: 10px;
+}
+
+.panel-category .smart-image,
+.category-card-image {
+  width: 100%;
+  height: 100%;
+  min-height: 0 !important;
+  --smart-fit: cover !important;
+}
+
+/* Stores — logos are square/contained; banners are panoramic/covered. */
+.home-store-logo,
+.store-logo-smart,
+.store-profile-smart {
+  aspect-ratio: 1 / 1;
+  --smart-fit: contain !important;
+  background: #fff;
+}
+
+.store-cover {
+  aspect-ratio: 16 / 7;
+  overflow: hidden;
+  background: var(--om-image-bg);
+}
+
+.store-banner,
+.store-banner-smart,
+.store-page-banner-image {
+  min-height: 0 !important;
+  overflow: hidden;
+  background: var(--om-image-bg);
+}
+
+.store-banner {
+  aspect-ratio: 16 / 5;
+}
+
+.store-cover .smart-image,
+.store-banner-smart,
+.store-page-banner-image {
+  width: 100%;
+  height: 100%;
+  --smart-fit: cover !important;
+}
+
+/* Product detail + quick view — contain in a geometry owned by the gallery. */
+.gallery-main {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  min-height: 0 !important;
+  overflow: hidden;
+  background: var(--om-image-bg-soft);
+}
+
+.product-main-smart-image,
+.quick-view-image > .smart-image {
+  --smart-fit: contain !important;
+  background: #f7f8fa;
+}
+
+.product-thumbs .smart-image,
+.quick-view-thumbs .smart-image {
+  --smart-fit: contain !important;
+  background: #f7f8fa;
+}
+
+.quick-view-image {
+  aspect-ratio: 1 / 1 !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: hidden;
+}
+
+.quick-view-image > .smart-image {
+  width: 100%;
+  height: 100%;
+}
+
+/* Advertising media — same frame for images and videos. */
+.home-promo-stage,
+.home-promo-slide,
+.home-promo-slide > a,
+.home-promo-media {
+  min-width: 0;
+}
+
+.home-promo-slide {
+  aspect-ratio: 16 / 5;
+}
+
+.home-promo-slide .smart-image,
+.home-promo-slide img,
+.home-promo-slide video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: var(--promo-position, 50% 50%);
+}
+
+/* Prevent accidental page-wide overflow. Intentional carousels keep their own overflow-x:auto. */
+.market-home,
+.page-space,
+.product-page-shell,
+.store-public-final,
+.cart-final-page,
+.checkout-market-page,
+.purchase-confirm-page,
+.marketplace-panels,
+.market-product-section,
+.market-store-section,
+.product-grid,
+.store-grid,
+.store-directory,
+.product-page,
+.product-gallery,
+.product-detail {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.market-product-card,
+.market-panel,
+.store-card,
+.store-directory-card,
+.cart-final-item,
+.checkout-item-row {
+  min-width: 0;
+}
+
+@media (max-width: 760px) {
+  .home-promo-slide {
+    aspect-ratio: 3 / 2;
+  }
+
+  .gallery-main {
+    aspect-ratio: 1 / 1;
+  }
+
+  .quick-view-image {
+    aspect-ratio: 4 / 3 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+
+  .product-card-smart-image {
+    padding: 8px;
+  }
+
+  .store-banner {
+    aspect-ratio: 3 / 1;
+  }
+}
+
+@media (max-width: 520px) {
+  .category-mini-grid {
+    gap: 10px;
+  }
+
+  .home-store-logo {
+    flex: 0 0 50px;
+    width: 50px !important;
+    height: 50px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .smart-image.is-loading::before {
+    animation: none;
+  }
+
+  .smart-image img {
+    transition: none;
+  }
+}
