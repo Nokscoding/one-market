@@ -1,11 +1,13 @@
 import { ArrowRight, CheckCircle2, Minus, Plus, ShoppingBag, Zap } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
+import EmptyState from '../components/EmptyState'
 import Loader from '../components/Loader'
 import SmartImage from '../components/SmartImage'
 import { useCart } from '../context/CartContext'
 import { money } from '../lib/format'
 import { supabase } from '../lib/supabase'
+import { logTechnicalError, userError } from '../lib/userErrors'
 
 export default function AddedToCartPage() {
   const [params] = useSearchParams()
@@ -27,38 +29,54 @@ export default function AddedToCartPage() {
   const [loading, setLoading] = useState(() => !snapshotMatches)
   const [updating, setUpdating] = useState(false)
   const [message, setMessage] = useState('')
+  const [loadError, setLoadError] = useState('')
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     if (snapshotMatches) {
+      setLoadError('')
       setLoading(false)
       return undefined
     }
 
     let active = true
+    setLoadError('')
     if (!productId) {
       setLoading(false)
       return () => { active = false }
     }
 
+    setLoading(true)
     ;(async () => {
-      const { data: p } = await supabase.from('products').select('*').eq('id', productId).maybeSingle()
-      if (!p || !active) return
+      const productResult = await supabase.from('products').select('*').eq('id', productId).maybeSingle()
+      if (productResult.error) throw productResult.error
+      const p = productResult.data || null
+      if (!p || !active) {
+        if (active) setProduct(null)
+        return
+      }
       setProduct(p)
 
-      const [{ data: s }, { data: images }, variantResult] = await Promise.all([
+      const [storeResult, imageResult, variantResult] = await Promise.all([
         supabase.from('stores').select('id,name,slug,country_code').eq('id', p.store_id).maybeSingle(),
         supabase.from('product_images').select('secure_url,sort_order').eq('product_id', p.id).order('sort_order').limit(1),
-        variantId ? supabase.from('product_variants').select('*').eq('id', variantId).eq('product_id', p.id).maybeSingle() : Promise.resolve({ data: null }),
+        variantId ? supabase.from('product_variants').select('*').eq('id', variantId).eq('product_id', p.id).maybeSingle() : Promise.resolve({ data: null, error: null }),
       ])
+      if (storeResult.error) throw storeResult.error
+      if (imageResult.error) throw imageResult.error
+      if (variantResult.error) throw variantResult.error
 
       if (!active) return
-      setStore(s || null)
-      setImage(images?.[0]?.secure_url || '')
+      setStore(storeResult.data || null)
+      setImage(imageResult.data?.[0]?.secure_url || '')
       setVariant(variantResult.data || null)
-    })().catch(() => {}).finally(() => active && setLoading(false))
+    })().catch(error => {
+      logTechnicalError('added-cart-load', error)
+      if (active) setLoadError(userError(error, 'cart'))
+    }).finally(() => { if (active) setLoading(false) })
 
     return () => { active = false }
-  }, [productId, variantId, snapshotMatches])
+  }, [productId, variantId, snapshotMatches, retryKey])
 
   const cartItem = useMemo(() => items.find(item => item.product_id === productId && (item.product_variant_id || '') === variantId), [items, productId, variantId])
   const unitPrice = Number(variant?.price ?? product?.price ?? navigationSnapshot?.unitPrice ?? cartItem?.unitPrice ?? 0)
@@ -73,7 +91,8 @@ export default function AddedToCartPage() {
     try {
       await updateQuantity(cartItem.id, next)
     } catch (error) {
-      setMessage(error?.message || 'Impossible de modifier la quantité.')
+      logTechnicalError('added-cart-quantity', error)
+      setMessage(userError(error, 'cart'))
     } finally {
       setUpdating(false)
     }
@@ -81,8 +100,12 @@ export default function AddedToCartPage() {
 
   if (loading) return <Loader fullscreen />
 
+  if (loadError) {
+    return <main className="section-shell page-space"><EmptyState title="Impossible de charger ce produit" text={loadError} action={<button className="button primary" type="button" onClick={() => setRetryKey(value => value + 1)}>Réessayer</button>}/></main>
+  }
+
   if (!product) {
-    return <main className="section-shell page-space"><div className="purchase-confirm-card"><h1>Produit introuvable</h1><Link className="button primary" to="/catalog">Retour au catalogue</Link></div></main>
+    return <main className="section-shell page-space"><div className="purchase-confirm-card"><h1>Produit introuvable</h1><p>Ce produit n’est plus disponible actuellement.</p><Link className="button primary" to="/catalog">Retour au catalogue</Link></div></main>
   }
 
   const buyNowParams = new URLSearchParams({ mode: 'buy-now', product: product.id, qty: String(quantity) })
@@ -107,7 +130,7 @@ export default function AddedToCartPage() {
               <div className="qty-control small">
                 <button disabled={updating || quantity <= 1 || !cartItem} onClick={() => changeQuantity(quantity - 1)}><Minus size={14}/></button>
                 <span>{quantity}</span>
-                <button disabled={updating || !cartItem || quantity >= maxStock} onClick={() => changeQuantity(quantity + 1)}><Plus size={14}/></button>
+                <button disabled={updating || !cartItem || maxStock <= 0 || quantity >= maxStock} onClick={() => changeQuantity(quantity + 1)}><Plus size={14}/></button>
               </div>
             </div>
             <small className="purchase-stock-note">{maxStock > 0 ? `${maxStock} unité${maxStock > 1 ? 's' : ''} disponible${maxStock > 1 ? 's' : ''}` : 'Stock indisponible'}</small>
