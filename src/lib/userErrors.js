@@ -9,6 +9,7 @@ const DIRECT_MESSAGES = {
   STORE_UNAVAILABLE: 'Une boutique de votre commande n’est plus disponible.',
   CART_EMPTY: 'Votre panier est vide.',
   CART_NOT_FOUND: 'Votre panier est indisponible. Actualisez la page puis réessayez.',
+  MIXED_CURRENCY_CART: 'Votre panier contient des produits dans plusieurs devises. Passez des commandes séparées pour continuer.',
   INSUFFICIENT_STOCK: 'Le stock disponible est insuffisant pour finaliser cette commande.',
   VARIANT_REQUIRED: 'Choisissez une option pour ce produit avant de continuer.',
   VARIANT_UNAVAILABLE: 'L’option sélectionnée n’est plus disponible.',
