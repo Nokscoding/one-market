@@ -45,7 +45,7 @@ export default function OrderPage() {
     setError('')
     try {
       const [orderResult, paymentResult] = await Promise.all([
-        supabase.from('orders').select('*').eq('id', id).maybeSingle(),
+        supabase.from('orders').select('id,order_number,customer_id,address_id,status,payment_method,payment_status,items_total,delivery_total,grand_total,currency,shipping_snapshot,customer_note,created_at,updated_at,delivery_method,delivery_fee_cdf,delivery_currency,logistics_status').eq('id', id).maybeSingle(),
         supabase.from('marketplace_settings').select('value').eq('key', 'payments').maybeSingle(),
       ])
       if (orderResult.error) throw orderResult.error
@@ -55,7 +55,7 @@ export default function OrderPage() {
       if (!currentOrder) return
 
       const [subResult, eventResult] = await Promise.all([
-        supabase.from('seller_orders').select('*').eq('order_id', currentOrder.id).order('created_at'),
+        supabase.from('seller_orders').select('id,order_id,store_id,seller_order_number,status,subtotal,delivery_fee,total,currency,refusal_reason,created_at,updated_at,delivery_method,delivery_fee_cdf,delivery_currency,logistics_status,commission_percent,commission_amount,seller_net_amount,settlement_status').eq('order_id', currentOrder.id).order('created_at'),
         supabase.from('order_status_events').select('id,status,label,created_at').eq('order_id', currentOrder.id).order('created_at'),
       ])
       if (subResult.error) throw subResult.error
@@ -72,7 +72,7 @@ export default function OrderPage() {
       const ids = list.map(x => x.id)
       const storeIds = [...new Set(list.map(x => x.store_id))]
       const [itemResult, storeResult, convResult] = await Promise.all([
-        supabase.from('order_items').select('*').in('seller_order_id', ids).order('created_at'),
+        supabase.from('order_items').select('id,order_id,seller_order_id,store_id,product_id,product_variant_id,product_name,product_image_url,variant_snapshot,unit_price,quantity,line_total,currency,created_at').in('seller_order_id', ids).order('created_at'),
         supabase.from('stores').select('id,name,slug,country_code,logo_url,is_verified,is_partner').in('id', storeIds),
         supabase.from('conversations').select('id,seller_order_id').in('seller_order_id', ids),
       ])
