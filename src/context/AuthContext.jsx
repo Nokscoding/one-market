@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { logTechnicalError, userError } from '../lib/userErrors'
 
 /**
  * AuthContext centralise la session Supabase et le profil One Market.
@@ -31,7 +32,7 @@ export function AuthProvider({ children }) {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id,full_name,phone,role,account_status,seller_terms_accepted_at,seller_terms_version')
         .eq('id', userId)
         .maybeSingle()
 
@@ -39,8 +40,9 @@ export function AuthProvider({ children }) {
       setProfile(data || null)
       return data || null
     } catch (error) {
+      logTechnicalError('profile.load', error)
       setProfile(null)
-      setProfileError(error?.message || 'Impossible de charger le profil.')
+      setProfileError(userError(error, 'profile'))
       return null
     } finally {
       setProfileLoading(false)
@@ -59,6 +61,8 @@ export function AuthProvider({ children }) {
         const { data } = await supabase.auth.getSession()
         if (!active) return
         setSession(data?.session || null)
+      } catch (error) {
+        logTechnicalError('auth.session', error)
       } finally {
         if (active) setLoading(false)
         window.clearTimeout(failsafe)
@@ -99,9 +103,7 @@ export function AuthProvider({ children }) {
     return () => { active = false }
   }, [session?.user?.id, loadProfile])
 
-  const refreshProfile = useCallback(async () => {
-    return loadProfile(session?.user?.id)
-  }, [loadProfile, session?.user?.id])
+  const refreshProfile = useCallback(async () => loadProfile(session?.user?.id), [loadProfile, session?.user?.id])
 
   const value = useMemo(() => ({
     session,
