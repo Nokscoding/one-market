@@ -21,7 +21,7 @@ export default function Stores() {
     ;(async () => {
       const { data, error: queryError } = await supabase
         .from('stores')
-        .select('*')
+        .select('id,name,slug,description,logo_url,banner_url,country_code,city,currency,status,primary_category_id,is_verified,is_partner,created_at')
         .eq('status', 'active')
         .eq('country_code', 'CD')
         .order('name')
