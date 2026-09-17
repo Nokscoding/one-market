@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { useAuth } from './AuthContext'
+import { logTechnicalError, userError } from '../lib/userErrors'
 import { supabase } from '../lib/supabase'
+import { useAuth } from './AuthContext'
 
 const FavoritesContext = createContext(null)
 
@@ -33,7 +34,8 @@ export function FavoritesProvider({ children }) {
         if (error) throw error
         setFavorites(new Set((data || []).map(item => item.product_id)))
       })
-      .catch(() => {
+      .catch(error => {
+        logTechnicalError('favorites.load', error)
         if (active) setFavorites(new Set())
       })
       .finally(() => {
@@ -46,7 +48,7 @@ export function FavoritesProvider({ children }) {
   const isFavorite = useCallback((productId) => favoritesRef.current.has(productId), [])
 
   const toggleFavorite = useCallback(async (productId) => {
-    if (!user?.id) throw new Error('AUTH_REQUIRED')
+    if (!user?.id) throw new Error(userError('AUTH_REQUIRED', 'auth'))
 
     const wasFavorite = favoritesRef.current.has(productId)
     const optimistic = new Set(favoritesRef.current)
@@ -57,41 +59,31 @@ export function FavoritesProvider({ children }) {
 
     try {
       if (wasFavorite) {
-        const { error } = await supabase
-          .from('product_favorites')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('product_id', productId)
+        const { error } = await supabase.from('product_favorites').delete().eq('user_id', user.id).eq('product_id', productId)
         if (error) throw error
       } else {
-        const { error } = await supabase
-          .from('product_favorites')
-          .insert({ user_id: user.id, product_id: productId })
+        const { error } = await supabase.from('product_favorites').insert({ user_id: user.id, product_id: productId })
         if (error) throw error
       }
       return !wasFavorite
     } catch (error) {
+      logTechnicalError('favorites.toggle', error)
       const rollback = new Set(favoritesRef.current)
       if (wasFavorite) rollback.add(productId)
       else rollback.delete(productId)
       favoritesRef.current = rollback
       setFavorites(new Set(rollback))
-      throw error
+      throw new Error(userError(error, 'generic'))
     }
   }, [user?.id])
 
-  const value = useMemo(() => ({
-    favorites,
-    loading,
-    isFavorite,
-    toggleFavorite,
-  }), [favorites, loading, isFavorite, toggleFavorite])
+  const value = useMemo(() => ({ favorites, loading, isFavorite, toggleFavorite }), [favorites, loading, isFavorite, toggleFavorite])
 
   return <FavoritesContext.Provider value={value}>{children}</FavoritesContext.Provider>
 }
 
 export function useFavorites() {
   const context = useContext(FavoritesContext)
-  if (!context) throw new Error('useFavorites doit être utilisé dans FavoritesProvider')
+  if (!context) throw new Error('Le module Favoris n’est pas disponible dans cette page.')
   return context
 }
