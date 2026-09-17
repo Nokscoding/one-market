@@ -9,6 +9,7 @@ import SmartImage from '../components/SmartImage'
 import StoreTrustBadge from '../components/StoreTrustBadge'
 import { publicSocialLinks } from '../lib/seller'
 import { supabase } from '../lib/supabase'
+import { logTechnicalError, userError } from '../lib/userErrors'
 
 function publicHref(label, value) {
   if (!value) return ''
@@ -26,36 +27,50 @@ export default function StorePage() {
   const [products, setProducts] = useState([])
   const [categoryName, setCategoryName] = useState('')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     let active = true
     async function run() {
       setLoading(true)
-      const { data: s } = await supabase.from('stores').select('*').eq('slug', slug).eq('status', 'active').eq('country_code', 'CD').maybeSingle()
+      setError('')
+      const storeResult = await supabase.from('stores').select('*').eq('slug', slug).eq('status', 'active').eq('country_code', 'CD').maybeSingle()
+      if (storeResult.error) throw storeResult.error
       if (!active) return
-      setStore(s || null)
+      const s = storeResult.data || null
+      setStore(s)
       setProducts([])
       setCategoryName('')
 
       if (s) {
-        const categoryPromise = s.primary_category_id ? supabase.from('categories').select('name').eq('id', s.primary_category_id).maybeSingle() : Promise.resolve({ data: null })
-        const [{ data: ps }, categoryResult] = await Promise.all([
+        const categoryPromise = s.primary_category_id ? supabase.from('categories').select('name').eq('id', s.primary_category_id).maybeSingle() : Promise.resolve({ data: null, error: null })
+        const [productResult, categoryResult] = await Promise.all([
           supabase.from('products').select('*').eq('store_id', s.id).eq('is_active', true).order('created_at', { ascending: false }),
           categoryPromise,
         ])
-        const ids = (ps || []).map(p => p.id)
-        const { data: images } = ids.length ? await supabase.from('product_images').select('*').in('product_id', ids).order('sort_order') : { data: [] }
+        if (productResult.error) throw productResult.error
+        if (categoryResult.error) throw categoryResult.error
+        const ids = (productResult.data || []).map(p => p.id)
+        const imageResult = ids.length ? await supabase.from('product_images').select('*').in('product_id', ids).order('sort_order') : { data: [], error: null }
+        if (imageResult.error) throw imageResult.error
         if (!active) return
         const imageMap = {}
-        ;(images || []).forEach(i => { if (!imageMap[i.product_id] && i.secure_url) imageMap[i.product_id] = i.secure_url })
-        setProducts((ps || []).map(p => ({ ...p, image: imageMap[p.id], store: s })))
+        ;(imageResult.data || []).forEach(i => { if (!imageMap[i.product_id] && i.secure_url) imageMap[i.product_id] = i.secure_url })
+        setProducts((productResult.data || []).map(p => ({ ...p, image: imageMap[p.id], store: s })))
         setCategoryName(categoryResult.data?.name || '')
       }
-      setLoading(false)
     }
-    run().catch(() => { if (active) { setStore(null); setProducts([]); setLoading(false) } })
+    run().catch(loadError => {
+      logTechnicalError('store-page-load', loadError)
+      if (active) {
+        setStore(null)
+        setProducts([])
+        setError(userError(loadError, 'generic'))
+      }
+    }).finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [slug])
+  }, [slug, retryKey])
 
   const rating = useMemo(() => {
     const rated = products.filter(product => Number(product.rating_count) > 0)
@@ -66,7 +81,8 @@ export default function StorePage() {
   }, [products])
 
   if (loading) return <Loader fullscreen />
-  if (!store) return <main className="section-shell page-space"><EmptyState title="Boutique introuvable"/></main>
+  if (error) return <main className="section-shell page-space"><EmptyState title="Impossible de charger cette boutique" text={error} action={<button className="button primary" type="button" onClick={() => setRetryKey(value => value + 1)}>Réessayer</button>}/></main>
+  if (!store) return <main className="section-shell page-space"><EmptyState title="Boutique introuvable" text="Cette boutique n’existe pas ou n’est pas disponible actuellement."/></main>
 
   const socials = publicSocialLinks(store).map(([label, value]) => ({ label, value, href: publicHref(label, value) })).filter(item => item.href)
 
