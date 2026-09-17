@@ -1,5 +1,5 @@
 import { ArrowRight, ChevronLeft, ChevronRight, MessageCircle, Store as StoreIcon, Truck } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Loader from '../components/Loader'
 import ProductCard from '../components/ProductCard'
@@ -24,15 +24,30 @@ function safePromoHref(value) {
   }
 }
 
+function promotionIsLive(item) {
+  if (!item || item.active === false || !String(item.url || '').trim()) return false
+  const now = Date.now()
+  if (item.start_at) {
+    const start = new Date(item.start_at).getTime()
+    if (Number.isFinite(start) && start > now) return false
+  }
+  if (item.end_at) {
+    const end = new Date(item.end_at).getTime()
+    if (Number.isFinite(end) && end < now) return false
+  }
+  return true
+}
+
 function HomePromoCarousel({ config }) {
   const slides = useMemo(() => {
     if (!config || config.enabled === false || !Array.isArray(config.items)) return []
     return config.items
-      .filter(item => item && item.active !== false && String(item.url || '').trim())
+      .filter(promotionIsLive)
       .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0))
   }, [config])
   const [index, setIndex] = useState(0)
   const [paused, setPaused] = useState(false)
+  const touchStart = useRef(null)
 
   useEffect(() => {
     if (index >= slides.length) setIndex(0)
@@ -48,18 +63,30 @@ function HomePromoCarousel({ config }) {
   if (!slides.length) return null
 
   const go = direction => setIndex(current => (current + direction + slides.length) % slides.length)
+  const onTouchStart = event => {
+    touchStart.current = event.touches?.[0]?.clientX ?? null
+    setPaused(true)
+  }
+  const onTouchEnd = event => {
+    const start = touchStart.current
+    const end = event.changedTouches?.[0]?.clientX
+    if (Number.isFinite(start) && Number.isFinite(end) && Math.abs(end - start) > 45) go(end < start ? 1 : -1)
+    touchStart.current = null
+    setPaused(false)
+  }
 
-  return <section className="section-shell home-promo-carousel" aria-label="Publicités et promotions" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onTouchStart={() => setPaused(true)} onTouchEnd={() => setPaused(false)}>
+  return <section className="section-shell home-promo-carousel" aria-label="Publicités et promotions" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
     <div className="home-promo-stage">
       <div className="home-promo-track" style={{ transform: `translate3d(-${index * 100}%,0,0)` }}>
         {slides.map((slide, slideIndex) => {
           const type = slide.media_type === 'video' ? 'video' : 'image'
           const href = safePromoHref(slide.link)
+          const external = href && !href.startsWith('/')
           const media = type === 'video'
-            ? <video src={slideIndex === index ? slide.url : undefined} autoPlay={slideIndex === index} muted loop playsInline preload={slideIndex === index ? 'metadata' : 'none'} aria-label={slide.alt || slide.title || 'Promotion One Market'}/>
-            : <SmartImage src={slide.url} alt={slide.alt || slide.title || 'Promotion One Market'} fit="cover" width={900} sizes="100vw" loading={slideIndex === 0 ? 'eager' : 'lazy'} fetchPriority={slideIndex === 0 ? 'high' : undefined}/>
+            ? <video src={slide.url} autoPlay={slideIndex === index} muted loop playsInline preload={slideIndex === index ? 'metadata' : 'none'} aria-label={slide.alt || slide.title || 'Promotion One Market'}/>
+            : <SmartImage src={slide.url} alt={slide.alt || slide.title || 'Promotion One Market'} fit="cover" width={1600} sizes="100vw" loading={slideIndex === 0 ? 'eager' : 'lazy'} fetchPriority={slideIndex === 0 ? 'high' : undefined}/>
           const body = <>{media}{slide.title ? <span className="home-promo-caption">{slide.title}</span> : null}</>
-          return <article className="home-promo-slide" key={slide.id || `${slide.url}-${slideIndex}`} aria-hidden={slideIndex !== index}>{href ? <a href={href} target={href.startsWith('/') ? undefined : '_blank'} rel={href.startsWith('/') ? undefined : 'noreferrer'}>{body}</a> : <div className="home-promo-media">{body}</div>}</article>
+          return <article className="home-promo-slide" key={slide.id || `${slide.url}-${slideIndex}`} aria-hidden={slideIndex !== index}>{href ? <a href={href} target={external && slide.target_blank !== false ? '_blank' : undefined} rel={external && slide.target_blank !== false ? 'noreferrer' : undefined}>{body}</a> : <div className="home-promo-media">{body}</div>}</article>
         })}
       </div>
       {slides.length > 1 && <>
@@ -80,12 +107,20 @@ export default function Home() {
 
   useEffect(() => {
     let active = true
+    supabase.from('marketplace_settings').select('value').eq('key', 'home_promotions').maybeSingle().then(({ data, error }) => {
+      if (!active || error) return
+      setPromotions(data?.value || null)
+    }).catch(() => {})
+    return () => { active = false }
+  }, [])
+
+  useEffect(() => {
+    let active = true
     Promise.all([
       supabase.from('products').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(30),
       supabase.from('stores').select('*').eq('status', 'active').eq('country_code', 'CD').order('created_at', { ascending: false }).limit(8),
       supabase.from('categories').select('*').eq('is_active', true).order('sort_order').limit(8),
-      supabase.from('marketplace_settings').select('value').eq('key', 'home_promotions').maybeSingle(),
-    ]).then(async ([pRes, sRes, cRes, promoRes]) => {
+    ]).then(async ([pRes, sRes, cRes]) => {
       if (!active) return
       const baseProducts = pRes.data || []
       const ids = baseProducts.map(p => p.id)
@@ -102,7 +137,6 @@ export default function Home() {
       setProducts(rdcProducts)
       setStores(sRes.data || [])
       setCategories(cRes.data || [])
-      setPromotions(promoRes.data?.value || null)
       setLoading(false)
     }).catch(() => active && setLoading(false))
     return () => { active = false }
