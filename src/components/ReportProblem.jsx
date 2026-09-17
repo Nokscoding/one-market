@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { logTechnicalError, userError } from '../lib/userErrors'
 
 const LABELS = {
   general: 'Problème général', order: 'Problème avec ma commande', delivery: 'Problème de livraison',
@@ -77,14 +78,18 @@ export default function ReportProblem({ source = 'page', orderId = null, orderNu
       priority: 'normal',
     }
 
-    const { error } = await supabase.from('support_tickets').insert(payload)
-    if (error) setFeedback(error.message === 'REPORTER_PHONE_REQUIRED' ? 'Ajoutez un numéro de téléphone valide.' : error.message || 'Impossible d’envoyer le signalement.')
-    else {
+    try {
+      const result = await supabase.from('support_tickets').insert(payload)
+      if (result.error) throw result.error
       setFeedback('Signalement envoyé à l’équipe One Market.')
       setMessage('')
       window.setTimeout(() => setOpen(false), 900)
+    } catch (error) {
+      logTechnicalError('support-report', error)
+      setFeedback(userError(error, 'support'))
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
   }
 
   const categories = orderId
@@ -96,7 +101,7 @@ export default function ReportProblem({ source = 'page', orderId = null, orderNu
   return <>
     <button type="button" className={`report-problem-trigger ${className}`.trim()} onClick={start}><AlertTriangle size={16}/> Signaler un problème</button>
     {open && <div className="report-modal-backdrop"><form className="report-modal" onSubmit={submit}>
-      <div className="report-modal-head"><div><span>Assistance One Market</span><h3>Signaler un problème</h3><p>Votre signalement sera transmis directement à notre équipe.</p></div><button type="button" onClick={() => setOpen(false)}><X size={18}/></button></div>
+      <div className="report-modal-head"><div><span>Assistance One Market</span><h3>Signaler un problème</h3><p>Votre signalement sera transmis directement à notre équipe.</p></div><button type="button" onClick={() => setOpen(false)} aria-label="Fermer"><X size={18}/></button></div>
       <label>Type de problème<select value={category} onChange={event => setCategory(event.target.value)}>{categories.map(value => <option key={value} value={value}>{LABELS[value]}</option>)}</select></label>
       <label>Numéro de téléphone<input required minLength={7} maxLength={30} value={phone} onChange={event => setPhone(event.target.value)} placeholder="+243…"/></label>
       {category === 'product' && products.length > 0 && <label>Produit concerné<select required value={selectedProduct} onChange={event => setSelectedProduct(event.target.value)}><option value="">Choisir un produit</option>{products.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
