@@ -242,7 +242,7 @@ export default function SellerWorkspacePage() {
         linkedin_url: normalizeOptionalUrl(storeForm.linkedin_url),
         whatsapp_business: storeForm.whatsapp_business.trim() || null,
       }
-      const result = await supabase.from('stores').insert(payload).select('*').single()
+      const result = await supabase.from('stores').insert(payload).select('id,owner_id,name,slug,description,logo_url,banner_url,country_code,city,currency,status,primary_category_id,phone,website_url,instagram_url,tiktok_url,facebook_url,linkedin_url,whatsapp_business,is_verified,is_partner,created_at,updated_at').single()
       if (result.error) throw result.error
       setStores(current => [...current, result.data])
       setSelectedStoreId(result.data.id)
@@ -275,7 +275,7 @@ export default function SellerWorkspacePage() {
         linkedin_url: normalizeOptionalUrl(storeForm.linkedin_url),
         whatsapp_business: storeForm.whatsapp_business.trim() || null,
       }
-      const result = await supabase.from('stores').update(payload).eq('id', selectedStore.id).select('*').single()
+      const result = await supabase.from('stores').update(payload).eq('id', selectedStore.id).select('id,owner_id,name,slug,description,logo_url,banner_url,country_code,city,currency,status,primary_category_id,phone,website_url,instagram_url,tiktok_url,facebook_url,linkedin_url,whatsapp_business,is_verified,is_partner,created_at,updated_at').single()
       if (result.error) throw result.error
       setStores(current => current.map(store => store.id === result.data.id ? result.data : store))
       setFeedback('Les informations de votre boutique ont été enregistrées.')
@@ -288,7 +288,7 @@ export default function SellerWorkspacePage() {
   async function toggleProduct(product) {
     setFeedback('')
     try {
-      const result = await supabase.from('products').update({ is_active: !product.is_active }).eq('id', product.id).select('*').single()
+      const result = await supabase.from('products').update({ is_active: !product.is_active }).eq('id', product.id).select('id,store_id,category_id,name,slug,description,price,old_price,currency,stock_qty,has_variants,is_active,is_demo,created_at,updated_at,rating_avg,rating_count').single()
       if (result.error) throw result.error
       setProducts(current => current.map(item => item.id === product.id ? result.data : item))
       setFeedback(result.data.is_active ? 'Le produit est maintenant visible dans la boutique.' : 'Le produit a été masqué de la boutique.')
@@ -302,7 +302,7 @@ export default function SellerWorkspacePage() {
     if (product.has_variants) return
     const stock = Math.max(0, Math.trunc(Number(value) || 0))
     try {
-      const result = await supabase.from('products').update({ stock_qty: stock }).eq('id', product.id).select('*').single()
+      const result = await supabase.from('products').update({ stock_qty: stock }).eq('id', product.id).select('id,store_id,category_id,name,slug,description,price,old_price,currency,stock_qty,has_variants,is_active,is_demo,created_at,updated_at,rating_avg,rating_count').single()
       if (result.error) throw result.error
       setProducts(current => current.map(item => item.id === product.id ? result.data : item))
     } catch (stockError) {
