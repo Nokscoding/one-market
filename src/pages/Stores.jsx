@@ -6,35 +6,39 @@ import Loader from '../components/Loader'
 import SmartImage from '../components/SmartImage'
 import StoreTrustBadge from '../components/StoreTrustBadge'
 import { supabase } from '../lib/supabase'
+import { logTechnicalError, userError } from '../lib/userErrors'
 
 export default function Stores() {
   const [stores, setStores] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     let active = true
-    supabase
-      .from('stores')
-      .select('*')
-      .eq('status', 'active')
-      .eq('country_code', 'CD')
-      .order('name')
-      .then(({ data }) => {
-        if (active) {
-          setStores(data || [])
-          setLoading(false)
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setStores([])
-          setLoading(false)
-        }
-      })
+    setLoading(true)
+    setError('')
+    ;(async () => {
+      const { data, error: queryError } = await supabase
+        .from('stores')
+        .select('*')
+        .eq('status', 'active')
+        .eq('country_code', 'CD')
+        .order('name')
+      if (queryError) throw queryError
+      if (active) setStores(data || [])
+    })().catch(loadError => {
+      logTechnicalError('stores-directory', loadError)
+      if (active) {
+        setStores([])
+        setError(userError(loadError, 'generic'))
+      }
+    }).finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [])
+  }, [retryKey])
 
   if (loading) return <Loader fullscreen />
+  if (error) return <main className="section-shell page-space"><EmptyState title="Impossible de charger les boutiques" text={error} action={<button className="button primary" type="button" onClick={() => setRetryKey(value => value + 1)}>Réessayer</button>}/></main>
 
   return (
     <main className="section-shell page-space">
