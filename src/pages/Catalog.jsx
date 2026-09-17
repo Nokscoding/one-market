@@ -24,7 +24,11 @@ export default function Catalog() {
   useEffect(() => {
     let active = true
     ;(async () => {
-      const { data, error: categoryError } = await supabase.from('categories').select('*').eq('is_active', true).order('sort_order')
+      const { data, error: categoryError } = await supabase
+        .from('categories')
+        .select('id,name,image_url,sort_order')
+        .eq('is_active', true)
+        .order('sort_order')
       if (categoryError) throw categoryError
       if (active) setCategories(data || [])
     })().catch(categoryError => {
@@ -40,31 +44,16 @@ export default function Catalog() {
     setError('')
 
     ;(async () => {
-      let query = supabase.from('products').select('*').eq('is_active', true).order('created_at', { ascending: false })
-      if (q) query = query.ilike('name', `%${q}%`)
-      if (category) query = query.eq('category_id', category)
-
-      const { data, error: productError } = await query
-      if (productError) throw productError
+      const result = await supabase.rpc('market_catalog_products', {
+        p_query: q.trim() || null,
+        p_category: category || null,
+        p_limit: 120,
+        p_offset: 0,
+      })
+      if (result.error) throw result.error
       if (!active) return
 
-      let list = data || []
-      const productIds = list.map(p => p.id)
-      const storeIds = [...new Set(list.map(p => p.store_id))]
-
-      const [imageResult, storeResult] = await Promise.all([
-        productIds.length ? supabase.from('product_images').select('*').in('product_id', productIds).order('sort_order') : Promise.resolve({ data: [], error: null }),
-        storeIds.length ? supabase.from('stores').select('id,name,slug,country_code,status,is_verified,is_partner').in('id', storeIds).eq('country_code', 'CD').eq('status', 'active') : Promise.resolve({ data: [], error: null }),
-      ])
-      if (imageResult.error) throw imageResult.error
-      if (storeResult.error) throw storeResult.error
-      if (!active) return
-
-      const storeMap = Object.fromEntries((storeResult.data || []).map(s => [s.id, s]))
-      const imageMap = {}
-      ;(imageResult.data || []).forEach(i => { if (!imageMap[i.product_id] && i.secure_url) imageMap[i.product_id] = i.secure_url })
-
-      list = list.map(p => ({ ...p, store: storeMap[p.store_id], image: imageMap[p.id] })).filter(p => p.store)
+      let list = result.data || []
       if (view === 'new') list = list.slice(0, 12)
 
       if (sort === 'rating') list.sort((a, b) => (Number(b.rating_avg) || 0) - (Number(a.rating_avg) || 0) || (Number(b.rating_count) || 0) - (Number(a.rating_count) || 0))
@@ -108,7 +97,7 @@ export default function Catalog() {
   if (view === 'categories') {
     return (
       <main className="section-shell page-space">
-        <div className="page-title"><span className="eyebrow">Explorer</span><h1>Catégories</h1><p>Choisis un univers pour découvrir les produits disponibles sur One Market.</p></div>
+        <div className="page-title"><span className="eyebrow">Explorer</span><h1>Catégories</h1><p>Choisissez un univers pour découvrir les produits disponibles sur One Market.</p></div>
         {categories.length ? <div className="category-row">{categories.map(c => <Link key={c.id} to={`/catalog?category=${c.id}`} className="category-card"><SmartImage src={c.image_url} alt={c.name} className="category-card-image" fit="cover" width={400} sizes="(max-width: 650px) 46vw, (max-width: 1000px) 31vw, 260px"/><span>{c.name}</span></Link>)}</div> : <EmptyState title="Aucune catégorie disponible"/>}
       </main>
     )
@@ -124,7 +113,7 @@ export default function Catalog() {
         {q && <button className="text-button" onClick={() => setFilter('q', '')}><Search size={16}/> Effacer la recherche</button>}
         <div className="catalog-sort"><label htmlFor="catalog-sort">Trier par</label><select id="catalog-sort" value={sort} onChange={e => setFilter('sort', e.target.value)}><option value="newest">Plus récents</option><option value="rating">Mieux notés</option><option value="price_asc">Prix croissant</option><option value="price_desc">Prix décroissant</option></select></div>
       </div>
-      {products.length ? <div className="product-grid">{products.map((p, productIndex) => <ProductCard key={p.id} product={p} priority={productIndex < 4}/>)}</div> : <EmptyState title="Aucun produit trouvé" text="Essaie une autre recherche ou retire certains filtres."/>}
+      {products.length ? <div className="product-grid">{products.map((p, productIndex) => <ProductCard key={p.id} product={p} priority={productIndex < 4}/>)}</div> : <EmptyState title="Aucun produit trouvé" text={q ? 'Essayez un autre nom de produit, une boutique ou une catégorie.' : 'Essayez une autre catégorie ou retirez certains filtres.'}/>} 
     </main>
   )
 }
