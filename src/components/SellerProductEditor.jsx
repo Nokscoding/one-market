@@ -121,11 +121,11 @@ export default function SellerProductEditor({ store, categories, product = null,
 
       let savedProduct
       if (editing) {
-        const result = await supabase.from('products').update(payload).eq('id', product.id).select('*').single()
+        const result = await supabase.from('products').update(payload).eq('id', product.id).select('id,store_id,category_id,name,slug,description,price,old_price,currency,stock_qty,has_variants,is_active,is_demo,created_at,updated_at,rating_avg,rating_count').single()
         if (result.error) throw result.error
         savedProduct = result.data
       } else {
-        const result = await supabase.from('products').insert({ ...payload, slug: `${slugify(name)}-${Date.now().toString(36)}` }).select('*').single()
+        const result = await supabase.from('products').insert({ ...payload, slug: `${slugify(name)}-${Date.now().toString(36)}` }).select('id,store_id,category_id,name,slug,description,price,old_price,currency,stock_qty,has_variants,is_active,is_demo,created_at,updated_at,rating_avg,rating_count').single()
         if (result.error) throw result.error
         savedProduct = result.data
       }
@@ -141,12 +141,12 @@ export default function SellerProductEditor({ store, categories, product = null,
       for (let index = 0; index < media.length; index += 1) {
         const item = media[index]
         if (item.kind === 'existing') {
-          const updated = await supabase.from('product_images').update({ sort_order: index, alt_text: name }).eq('id', item.id).eq('product_id', savedProduct.id).select('*').single()
+          const updated = await supabase.from('product_images').update({ sort_order: index, alt_text: name }).eq('id', item.id).eq('product_id', savedProduct.id).select('id,product_id,secure_url,alt_text,sort_order,created_at').single()
           if (updated.error) throw updated.error
           finalImages.push(updated.data)
         } else {
           const uploaded = await uploadOneMarketImage(item.file, { folder: `one-market/products/${store.id}`, tags: ['one-market', 'seller-product'] })
-          const inserted = await supabase.from('product_images').insert({ product_id: savedProduct.id, secure_url: uploaded.secureUrl, alt_text: name, sort_order: index }).select('*').single()
+          const inserted = await supabase.from('product_images').insert({ product_id: savedProduct.id, secure_url: uploaded.secureUrl, alt_text: name, sort_order: index }).select('id,product_id,secure_url,alt_text,sort_order,created_at').single()
           if (inserted.error) throw inserted.error
           finalImages.push(inserted.data)
         }
@@ -169,11 +169,11 @@ export default function SellerProductEditor({ store, categories, product = null,
 
         if (row.id) {
           keptVariantIds.push(row.id)
-          const updated = await supabase.from('product_variants').update(variantPayload).eq('id', row.id).eq('product_id', savedProduct.id).select('*').single()
+          const updated = await supabase.from('product_variants').update(variantPayload).eq('id', row.id).eq('product_id', savedProduct.id).select('id,product_id,sku,attributes,price,stock_qty,is_active,created_at').single()
           if (updated.error) throw updated.error
           savedVariants.push(updated.data)
         } else if (Object.keys(attributes).length) {
-          const inserted = await supabase.from('product_variants').insert(variantPayload).select('*').single()
+          const inserted = await supabase.from('product_variants').insert(variantPayload).select('id,product_id,sku,attributes,price,stock_qty,is_active,created_at').single()
           if (inserted.error) throw inserted.error
           savedVariants.push(inserted.data)
         }
@@ -191,7 +191,7 @@ export default function SellerProductEditor({ store, categories, product = null,
         : baseStock
       const shouldHaveVariants = activeSavedVariants.length > 0
       if (Boolean(savedProduct.has_variants) !== shouldHaveVariants || Number(savedProduct.stock_qty) !== finalStock) {
-        const normalized = await supabase.from('products').update({ has_variants: shouldHaveVariants, stock_qty: finalStock }).eq('id', savedProduct.id).select('*').single()
+        const normalized = await supabase.from('products').update({ has_variants: shouldHaveVariants, stock_qty: finalStock }).eq('id', savedProduct.id).select('id,store_id,category_id,name,slug,description,price,old_price,currency,stock_qty,has_variants,is_active,is_demo,created_at,updated_at,rating_avg,rating_count').single()
         if (normalized.error) throw normalized.error
         savedProduct = normalized.data
       }
