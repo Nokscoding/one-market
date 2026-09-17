@@ -1,8 +1,9 @@
 import { ArrowDown, ArrowUp, ImagePlus, Plus, Save, Trash2, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import SmartImage from './SmartImage'
 import { uploadOneMarketImage } from '../lib/cloudinary'
 import { supabase } from '../lib/supabase'
+import { logTechnicalError, userError } from '../lib/userErrors'
+import SmartImage from './SmartImage'
 
 function slugify(value) {
   return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
@@ -88,16 +89,16 @@ export default function SellerProductEditor({ store, categories, product = null,
     const hasVariants = activeVariants.length > 0
     const baseStock = Math.max(0, Math.trunc(Number(form.stock_qty) || 0))
 
-    if (!name) return setMessage('Indique le nom du produit.')
-    if (!Number.isFinite(price) || price < 0) return setMessage('Le prix du produit est invalide.')
-    if (media.length === 0) return setMessage('Ajoute au moins une image du produit.')
+    if (!name) return setMessage('Indiquez le nom du produit.')
+    if (!Number.isFinite(price) || price < 0) return setMessage('Saisissez un prix valide.')
+    if (media.length === 0) return setMessage('Ajoutez au moins une image du produit.')
 
     for (const row of activeVariants) {
       const stock = Number(row.stock_qty)
       const variantPrice = row.price === '' ? null : Number(row.price)
       if (!row.size.trim() && !row.color.trim() && !row.option.trim()) return setMessage('Chaque variante doit avoir au moins une taille, une couleur ou une option.')
-      if (!Number.isInteger(stock) || stock < 0) return setMessage('Vérifie le stock des variantes.')
-      if (variantPrice !== null && (!Number.isFinite(variantPrice) || variantPrice < 0)) return setMessage('Vérifie le prix des variantes.')
+      if (!Number.isInteger(stock) || stock < 0) return setMessage('Vérifiez le stock des variantes.')
+      if (variantPrice !== null && (!Number.isFinite(variantPrice) || variantPrice < 0)) return setMessage('Vérifiez le prix des variantes.')
     }
 
     const totalVariantStock = activeVariants.reduce((sum, row) => sum + Math.max(0, Number(row.stock_qty) || 0), 0)
@@ -196,8 +197,9 @@ export default function SellerProductEditor({ store, categories, product = null,
       }
 
       onSaved?.({ product: savedProduct, images: finalImages, variants: savedVariants })
-    } catch (error) {
-      setMessage(error?.message || 'Impossible d’enregistrer ce produit.')
+    } catch (saveError) {
+      logTechnicalError('seller-product-save', saveError)
+      setMessage(userError(saveError, 'product'))
       setSaving(false)
       return
     }
@@ -207,7 +209,7 @@ export default function SellerProductEditor({ store, categories, product = null,
 
   return (
     <form className="seller-product-editor" onSubmit={save}>
-      <div className="seller-product-editor-head"><div><span className="eyebrow">Catalogue</span><h2>{editing ? 'Modifier le produit' : 'Nouveau produit'}</h2><p>Informations, images Cloudinary, variantes et stock.</p></div><button type="button" className="seller-editor-close" onClick={onCancel}><X size={19}/></button></div>
+      <div className="seller-product-editor-head"><div><span className="eyebrow">Catalogue</span><h2>{editing ? 'Modifier le produit' : 'Nouveau produit'}</h2><p>Informations, images, variantes et stock.</p></div><button type="button" className="seller-editor-close" onClick={onCancel} aria-label="Fermer"><X size={19}/></button></div>
 
       <div className="seller-product-editor-grid">
         <label>Nom du produit<input required value={form.name} onChange={event => setForm({ ...form, name: event.target.value })}/></label>
@@ -220,22 +222,22 @@ export default function SellerProductEditor({ store, categories, product = null,
       </div>
 
       <section className="seller-editor-section">
-        <div className="seller-editor-section-head"><div><strong>Images du produit</strong><span>La première image est l’image principale. Maximum 8.</span></div><label className="button secondary"><ImagePlus size={17}/> Ajouter des images<input hidden multiple type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={addImages}/></label></div>
+        <div className="seller-editor-section-head"><div><strong>Images du produit</strong><span>La première image est principale. L’aperçu montre le cadrage carré utilisé dans les listes. Maximum 8 images.</span></div><label className="button secondary"><ImagePlus size={17}/> Ajouter des images<input hidden multiple type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={addImages}/></label></div>
         <div className="seller-media-grid">
-          {media.map((item, index) => <article key={item.id || item.src} className={index === 0 ? 'is-primary' : ''}><SmartImage src={item.src} fallback="OM" fit="contain" width={320}/><div><span>{index === 0 ? 'Image principale' : `Image ${index + 1}`}</span><div><button type="button" disabled={index === 0} onClick={() => makePrimary(index)} title="Définir comme principale">★</button><button type="button" disabled={index === 0} onClick={() => moveMedia(index, -1)}><ArrowUp size={15}/></button><button type="button" disabled={index === media.length - 1} onClick={() => moveMedia(index, 1)}><ArrowDown size={15}/></button><button type="button" className="danger" onClick={() => removeMedia(index)}><Trash2 size={15}/></button></div></div></article>)}
-          {!media.length && <label className="seller-media-empty"><ImagePlus size={26}/><strong>Ajoute au moins une image</strong><span>JPG, PNG, WebP ou AVIF.</span><input hidden multiple type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={addImages}/></label>}
+          {media.map((item, index) => <article key={item.id || item.src} className={index === 0 ? 'is-primary' : ''}><SmartImage src={item.src} fallback="OM" fit="cover" width={320}/><div><span>{index === 0 ? 'Image principale' : `Image ${index + 1}`}</span><div><button type="button" disabled={index === 0} onClick={() => makePrimary(index)} title="Définir comme principale">★</button><button type="button" disabled={index === 0} onClick={() => moveMedia(index, -1)} aria-label="Monter l’image"><ArrowUp size={15}/></button><button type="button" disabled={index === media.length - 1} onClick={() => moveMedia(index, 1)} aria-label="Descendre l’image"><ArrowDown size={15}/></button><button type="button" className="danger" onClick={() => removeMedia(index)} aria-label="Supprimer l’image"><Trash2 size={15}/></button></div></div></article>)}
+          {!media.length && <label className="seller-media-empty"><ImagePlus size={26}/><strong>Ajoutez au moins une image</strong><span>Pour un meilleur rendu, centrez le produit. Les photos portrait et paysage seront recadrées proprement dans les listes.</span><input hidden multiple type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={addImages}/></label>}
         </div>
       </section>
 
       <section className="seller-editor-section">
         <div className="seller-editor-section-head"><div><strong>Variantes</strong><span>Facultatif : taille, couleur ou autre option avec stock et prix propre.</span></div><button type="button" className="button secondary" onClick={() => setVariantRows(current => [...current, emptyVariant()])}><Plus size={17}/> Ajouter une variante</button></div>
         <div className="seller-variant-editor-list">
-          {variantRows.map((row, index) => <article key={row.id || index} className={!row.is_active ? 'is-disabled' : ''}><label>Taille<input value={row.size} onChange={event => updateVariant(index, { size: event.target.value })} placeholder="S, M, L…"/></label><label>Couleur<input value={row.color} onChange={event => updateVariant(index, { color: event.target.value })} placeholder="Noir, bleu…"/></label><label>Autre option<input value={row.option} onChange={event => updateVariant(index, { option: event.target.value })} placeholder="128 Go, pack…"/></label><label>Prix USD <small>(vide = prix produit)</small><input type="number" min="0" step="0.01" value={row.price} onChange={event => updateVariant(index, { price: event.target.value })}/></label><label>Stock<input type="number" min="0" step="1" value={row.stock_qty} onChange={event => updateVariant(index, { stock_qty: event.target.value })}/></label><label className="seller-variant-active"><input type="checkbox" checked={row.is_active} onChange={event => updateVariant(index, { is_active: event.target.checked })}/><span>Active</span></label><button type="button" className="seller-variant-remove" onClick={() => setVariantRows(current => current.filter((_, i) => i !== index))}><Trash2 size={16}/></button></article>)}
-          {!variantRows.length && <div className="seller-variant-empty">Pas de variante : le stock global du produit sera utilisé.</div>}
+          {variantRows.map((row, index) => <article key={row.id || index} className={!row.is_active ? 'is-disabled' : ''}><label>Taille<input value={row.size} onChange={event => updateVariant(index, { size: event.target.value })} placeholder="S, M, L…"/></label><label>Couleur<input value={row.color} onChange={event => updateVariant(index, { color: event.target.value })} placeholder="Noir, bleu…"/></label><label>Autre option<input value={row.option} onChange={event => updateVariant(index, { option: event.target.value })} placeholder="128 Go, pack…"/></label><label>Prix USD <small>(vide = prix produit)</small><input type="number" min="0" step="0.01" value={row.price} onChange={event => updateVariant(index, { price: event.target.value })}/></label><label>Stock<input type="number" min="0" step="1" value={row.stock_qty} onChange={event => updateVariant(index, { stock_qty: event.target.value })}/></label><label className="seller-variant-active"><input type="checkbox" checked={row.is_active} onChange={event => updateVariant(index, { is_active: event.target.checked })}/><span>Active</span></label><button type="button" className="seller-variant-remove" onClick={() => setVariantRows(current => current.filter((_, i) => i !== index))} aria-label="Supprimer la variante"><Trash2 size={16}/></button></article>)}
+          {!variantRows.length && <div className="seller-variant-empty">Aucune variante : le stock global du produit sera utilisé.</div>}
         </div>
       </section>
 
-      {message && <div className="seller-feedback">{message}</div>}
+      {message && <div className="seller-feedback" role="alert">{message}</div>}
       <div className="seller-product-editor-actions"><button type="button" className="button secondary" onClick={onCancel}>Annuler</button><button className="button primary" disabled={saving}><Save size={17}/>{saving ? 'Enregistrement…' : editing ? 'Enregistrer les modifications' : 'Ajouter le produit'}</button></div>
     </form>
   )
