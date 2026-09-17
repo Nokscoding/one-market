@@ -20,6 +20,21 @@ export default function AuthPage() {
 
   if (user) return <Navigate to={location.state?.from || '/account'} replace />
 
+  function authDestination() {
+    const from = location.state?.from
+    return from && from !== '/auth' ? from : '/account'
+  }
+
+  async function completeAuthNavigation(session) {
+    if (!session) throw new Error('Connexion réussie, mais aucune session One Market n’a été créée.')
+
+    // Supabase persiste la session dans le navigateur. Une navigation complète évite
+    // une course entre signInWithPassword, onAuthStateChange et ProtectedRoute,
+    // particulièrement visible sur Safari/iOS où l’utilisateur pouvait revenir sur /auth.
+    const destination = authDestination()
+    window.location.replace(destination)
+  }
+
   async function submit(event) {
     event.preventDefault()
     if (loading) return
@@ -47,7 +62,7 @@ export default function AuthPage() {
         })
         if (authError) throw authError
 
-        if (data.session) navigate(location.state?.from || '/account', { replace: true })
+        if (data.session) await completeAuthNavigation(data.session)
         else {
           setMessage('Compte créé. Vérifie ton e-mail si une confirmation est demandée, puis connecte-toi.')
           setMode('login')
@@ -55,9 +70,15 @@ export default function AuthPage() {
         }
       } else {
         setLoading(true)
-        const { error: authError } = await supabase.auth.signInWithPassword({ email: form.email.trim(), password: form.password })
+        const { data, error: authError } = await supabase.auth.signInWithPassword({
+          email: form.email.trim(),
+          password: form.password,
+        })
         if (authError) throw authError
-        navigate(location.state?.from || '/account', { replace: true })
+
+        const { data: persisted, error: sessionError } = await supabase.auth.getSession()
+        if (sessionError) throw sessionError
+        await completeAuthNavigation(persisted?.session || data?.session)
       }
     } catch (submitError) {
       const raw = submitError?.message || 'Une erreur est survenue.'
