@@ -101,7 +101,7 @@ export default function Home() {
     ;(async () => {
       try {
         const [pRes, sRes, cRes] = await Promise.all([
-          supabase.from('products').select('id,store_id,category_id,name,slug,price,old_price,currency,stock_qty,has_variants,is_active,rating_avg,rating_count,created_at,image_url,thumbnail_url').eq('is_active', true).order('created_at', { ascending: false }).limit(30),
+          supabase.from('products').select('id,store_id,category_id,name,slug,price,old_price,currency,stock_qty,has_variants,is_active,rating_avg,rating_count,created_at').eq('is_active', true).order('created_at', { ascending: false }).limit(30),
           supabase.from('stores').select('id,name,slug,country_code,status,city,logo_url,is_verified,is_partner,created_at').eq('status', 'active').eq('country_code', 'CD').order('created_at', { ascending: false }).limit(8),
           supabase.from('categories').select('id,name,image_url,sort_order,is_active').eq('is_active', true).order('sort_order').limit(8),
         ])
@@ -122,7 +122,7 @@ export default function Home() {
         const firstImage = {}
         ;(imagesResult.data || []).forEach(img => { if (!firstImage[img.product_id] && img.secure_url) firstImage[img.product_id] = img.secure_url })
         const storeMap = Object.fromEntries((storeResult.data || []).map(store => [store.id, store]))
-        const rdcProducts = baseProducts.map(product => ({ ...product, image: firstImage[product.id] || product.image_url || product.thumbnail_url || null, store: storeMap[product.store_id] })).filter(product => product.store?.country_code === 'CD' && product.store?.status === 'active')
+        const rdcProducts = baseProducts.map(product => ({ ...product, image: firstImage[product.id] || null, store: storeMap[product.store_id] })).filter(product => product.store?.country_code === 'CD' && product.store?.status === 'active')
         setProducts(rdcProducts)
         setStores(sRes.data || [])
         setCategories(cRes.data || [])
