@@ -54,7 +54,7 @@ export default function SellerAdsPanel({ store, products = [], categories = [] }
     try {
       const [packageResult,campaignResult]=await Promise.all([
         supabase.from('ad_packages').select('id,code,name,description,target_type,placement,duration_days,price_usd,sort_order').eq('is_active',true).order('sort_order'),
-        supabase.from('ad_campaigns').select('id,store_id,product_id,category_id,package_id,target_type,placement,title,media_url,destination_url,amount_usd,currency,status,payment_status,payment_reference,starts_at,ends_at,rejection_reason,impressions,clicks,created_at').eq('store_id',store.id).order('created_at',{ascending:false}),
+        supabase.rpc('list_my_ad_campaigns',{ p_store_id:store.id }),
       ])
       if(packageResult.error) throw packageResult.error
       if(campaignResult.error) throw campaignResult.error
