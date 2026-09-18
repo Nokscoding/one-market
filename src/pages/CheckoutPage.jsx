@@ -14,6 +14,7 @@ import { logTechnicalError, userError } from '../lib/userErrors'
 const DEFAULT_PAYMENT_SETTINGS = {
   cod_enabled: true,
   mobile_money_enabled: false,
+  mobile_money_coming_soon: true,
   mobile_money_whatsapp: '243995585991',
   mobile_money_display: '0995585991',
 }
@@ -64,9 +65,10 @@ export default function CheckoutPage() {
       }
       if (!data?.value) return
       const next = { ...DEFAULT_PAYMENT_SETTINGS, ...data.value }
+      const mobileAvailable = next.mobile_money_enabled === true && next.mobile_money_coming_soon !== true
       setPaymentSettings(next)
-      if (!next.cod_enabled && next.mobile_money_enabled) setPaymentMethod('mobile_money')
-      if (!next.mobile_money_enabled && next.cod_enabled) setPaymentMethod('cod')
+      if (!next.cod_enabled && mobileAvailable) setPaymentMethod('mobile_money')
+      if (!mobileAvailable && next.cod_enabled) setPaymentMethod('cod')
     })
     return () => { active = false }
   }, [])
@@ -131,6 +133,7 @@ export default function CheckoutPage() {
   const chosenDelivery = deliveryOption(selectedDelivery)
   const displayedDeliveryFee = selectedDelivery === deliveryMethod ? deliveryFeeCdf : chosenDelivery.feeCdf
   const selectedAddress = addresses.find(address => address.id === selected) || null
+  const mobileMoneyAvailable = paymentSettings.mobile_money_enabled === true && paymentSettings.mobile_money_coming_soon !== true
   const mobileMoneyNumber = paymentSettings.mobile_money_display || paymentSettings.mobile_money_whatsapp || '0995585991'
 
   function resetAddressForm() {
@@ -209,7 +212,7 @@ export default function CheckoutPage() {
     if (!selected) return setError('Choisissez une adresse de livraison.')
     if (!checkoutItems.length) return setError('Votre panier ne contient aucun article à commander.')
     if (paymentMethod === 'cod' && !paymentSettings.cod_enabled) return setError('Le paiement à la livraison est momentanément indisponible.')
-    if (paymentMethod === 'mobile_money' && !paymentSettings.mobile_money_enabled) return setError('Le paiement Mobile Money est momentanément indisponible.')
+    if (paymentMethod === 'mobile_money' && !mobileMoneyAvailable) return setError('Le paiement Mobile Money arrive bientôt. Utilisez le paiement à la livraison pour le moment.')
 
     const whatsappWindow = paymentMethod === 'mobile_money' ? window.open('about:blank', '_blank') : null
     setSubmitting(true)
@@ -293,7 +296,7 @@ export default function CheckoutPage() {
             <div className="checkout-market-section-head"><span>4</span><div><h2>Mode de paiement</h2><p>Choisissez comment régler votre commande.</p></div></div>
             <div className="payment-method-grid">
               {paymentSettings.cod_enabled && <button type="button" className={`payment-method-card ${paymentMethod === 'cod' ? 'active' : ''}`} onClick={() => setPaymentMethod('cod')}><Banknote size={22}/><span><strong>Paiement à la livraison</strong><small>Payez au livreur lorsque vous recevez votre commande.</small></span><span className="payment-radio">{paymentMethod === 'cod' && <Check size={15}/>}</span></button>}
-              {paymentSettings.mobile_money_enabled && <button type="button" className={`payment-method-card ${paymentMethod === 'mobile_money' ? 'active' : ''}`} onClick={() => setPaymentMethod('mobile_money')}><MessageCircle size={22}/><span><strong>Mobile Money</strong><small>Finalisez le paiement avec One Market via WhatsApp.</small></span><span className="payment-radio">{paymentMethod === 'mobile_money' && <Check size={15}/>}</span></button>}
+              {mobileMoneyAvailable ? <button type="button" className={`payment-method-card ${paymentMethod === 'mobile_money' ? 'active' : ''}`} onClick={() => setPaymentMethod('mobile_money')}><MessageCircle size={22}/><span><strong>Mobile Money</strong><small>Paiement Mobile Money sécurisé One Market.</small></span><span className="payment-radio">{paymentMethod === 'mobile_money' && <Check size={15}/>}</span></button> : <button type="button" className="payment-method-card" disabled aria-disabled="true"><MessageCircle size={22}/><span><strong>Mobile Money — bientôt</strong><small>Arrive prochainement. Pour l’instant, payez directement au livreur à la réception.</small></span></button>}
             </div>
             <label className="checkout-note-label">Instructions concernant la commande <small>Facultatif</small><textarea rows="3" maxLength="400" value={customerNote} onChange={event => setCustomerNote(event.target.value)} placeholder="Une précision utile concernant votre commande…"/></label>
           </section>

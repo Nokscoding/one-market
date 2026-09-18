@@ -23,7 +23,7 @@ export default function SellerAccessPage() {
         </div>
         <div className="seller-join-points">
           <div><ShoppingBag size={21}/><span><strong>Catalogue vendeur</strong><small>Produits, images, variantes, prix et stock.</small></span></div>
-          <div><ClipboardList size={21}/><span><strong>Commandes</strong><small>Suivi de chaque commande et de la livraison.</small></span></div>
+          <div><ClipboardList size={21}/><span><strong>Commandes</strong><small>Préparez vos articles. La livraison est gratuite pour le vendeur et gérée par One Market.</small></span></div>
           <div><BarChart3 size={21}/><span><strong>Statistiques</strong><small>Les données réelles de ta boutique, simplement.</small></span></div>
         </div>
       </section>

@@ -436,7 +436,7 @@ export default function SellerWorkspacePage() {
         </section>}
 
         {!workspaceLoading && tab === 'orders' && <section className="seller-panel seller-orders-panel">
-          <div className="seller-panel-head"><div><h2>Commandes de la boutique</h2><p>Préparez les commandes. La prise en charge et la livraison sont ensuite gérées par One Market.</p></div></div>
+          <div className="seller-panel-head"><div><h2>Commandes de la boutique</h2><p>Préparez uniquement les articles. La récupération et la livraison sont gratuites pour votre boutique et entièrement gérées par One Market.</p></div></div>
           <div className="seller-orders-list">{orders.map(order => {
             const parent = parentOrders[order.order_id] || {}
             const lines = orderItems[order.id] || []

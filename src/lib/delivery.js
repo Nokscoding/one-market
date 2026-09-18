@@ -9,7 +9,7 @@ export const DELIVERY_OPTIONS = [
   {
     code: 'express',
     label: 'Livraison express',
-    feeCdf: 10000,
+    feeCdf: 15000,
     description: 'Traitement et livraison prioritaires.',
     short: 'Express',
   },
