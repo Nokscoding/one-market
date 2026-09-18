@@ -72,3 +72,61 @@
     transform:translateY(0)
   }
 }
+
+/* iOS-safe account dropdown */
+@media(max-width:760px){
+  .client-account-sidebar{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    overflow:visible!important;
+  }
+
+  .client-account-sidebar>.client-account-mobile-trigger{
+    display:grid!important;
+    flex:0 0 52px!important;
+    width:100%!important;
+    height:52px!important;
+    min-height:52px!important;
+    max-height:52px!important;
+    margin:0!important;
+    align-self:stretch!important;
+  }
+
+  .client-account-nav-list{
+    display:none!important;
+    position:static!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    overflow:visible!important;
+    opacity:1!important;
+    visibility:visible!important;
+    pointer-events:auto!important;
+    margin:7px 0 0!important;
+    padding:8px!important;
+    border:1px solid #dfe4eb!important;
+    border-radius:12px!important;
+    background:#fff!important;
+    box-shadow:0 10px 26px rgba(11,27,59,.10)!important;
+    transform:none!important;
+    transition:none!important;
+  }
+
+  .client-account-sidebar.is-open .client-account-nav-list{
+    display:grid!important;
+    height:auto!important;
+    max-height:none!important;
+  }
+
+  .client-account-nav-list>a,
+  .client-account-nav-list>button{
+    min-height:44px!important;
+    height:auto!important;
+    flex:none!important;
+  }
+}
