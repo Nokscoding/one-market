@@ -41,3 +41,34 @@
   .client-account-nav-list>a,.client-account-nav-list>button{min-height:44px;grid-template-columns:23px 1fr auto;padding:0 10px}
   .client-account-nav-list .client-account-logout{margin-top:4px;border-top:1px solid #edf0f4;border-radius:8px}
 }
+
+/* Reliable mobile dropdown override */
+@media(max-width:760px){
+  .client-account-sidebar{z-index:30!important}
+  .client-account-nav-list{
+    display:grid!important;
+    position:static!important;
+    max-height:0!important;
+    opacity:0!important;
+    overflow:hidden!important;
+    pointer-events:none!important;
+    margin-top:0!important;
+    padding:0!important;
+    border:0!important;
+    box-shadow:none!important;
+    transform:translateY(-4px);
+    transition:max-height .24s ease,opacity .18s ease,transform .18s ease,margin .18s ease,padding .18s ease!important
+  }
+  .client-account-sidebar.is-open .client-account-nav-list{
+    max-height:620px!important;
+    opacity:1!important;
+    pointer-events:auto!important;
+    margin-top:7px!important;
+    padding:8px!important;
+    border:1px solid #dfe4eb!important;
+    border-radius:12px!important;
+    background:#fff!important;
+    box-shadow:0 12px 28px rgba(11,27,59,.10)!important;
+    transform:translateY(0)
+  }
+}
