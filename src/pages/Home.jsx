@@ -92,6 +92,7 @@ export default function Home() {
   const [stores, setStores] = useState([])
   const [categories, setCategories] = useState([])
   const [promotions, setPromotions] = useState(null)
+  const [sponsoredBanners, setSponsoredBanners] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -101,6 +102,16 @@ export default function Home() {
       if (error) { logTechnicalError('home-promotions', error); return }
       setPromotions(data?.value || null)
     }).catch(error => logTechnicalError('home-promotions', error))
+    return () => { active = false }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    supabase.rpc('list_active_ads',{ p_placement:'home_banner', p_limit:20 }).then(({data,error}) => {
+      if (!active) return
+      if (error) { logTechnicalError('home-sponsored-ads',error); return }
+      setSponsoredBanners(data || [])
+    }).catch(error => logTechnicalError('home-sponsored-ads',error))
     return () => { active = false }
   }, [])
 
@@ -143,12 +154,28 @@ export default function Home() {
     return () => { active = false }
   }, [])
 
+  const promoConfig = useMemo(() => {
+    const paid = sponsoredBanners.map((ad,index) => ({
+      id:`paid-${ad.id}`,
+      url:ad.media_url,
+      link:ad.destination_url || (ad.store_slug ? `/store/${ad.store_slug}` : ''),
+      title:`Sponsorisé · ${ad.title || ad.store_name || 'One Market Ads'}`,
+      alt:ad.title || ad.store_name || 'Publicité sponsorisée',
+      active:true,
+      media_type:'image',
+      sort_order:index - 1000,
+      target_blank:false,
+      crop_x:50,crop_y:50,crop_zoom:100,
+    }))
+    return { ...(promotions || {}), enabled: paid.length ? true : promotions?.enabled, items:[...paid,...(Array.isArray(promotions?.items) ? promotions.items : [])] }
+  },[promotions,sponsoredBanners])
+
   const featured = products.slice(0, 4)
   const localSelection = products.slice(4, 8)
   if (loading) return <Loader fullscreen />
 
   return <main className="market-home">
-    <HomePromoCarousel config={promotions}/>
+    <HomePromoCarousel config={promoConfig}/>
     <section className="market-hero-wrap"><div className="market-hero section-shell"><div className="market-hero-copy"><span>One Market</span><h1>Tout votre shopping, au même endroit.</h1><p>Achetez auprès de plusieurs boutiques en RDC et suivez vos commandes depuis un seul compte.</p><Link to="/catalog">Voir les produits <ArrowRight size={18}/></Link></div><div className="market-hero-products" aria-label="Nouveautés">{featured.length ? featured.map((product, productIndex) => <MiniProduct key={product.id} product={product} priority={productIndex < 2}/>) : <div className="market-hero-empty"><strong>Découvrez One Market.</strong><span>Parcourez les boutiques et leurs produits.</span></div>}</div></div></section>
     <section className="section-shell marketplace-panels">
       <article className="market-panel"><div className="market-panel-title"><h2>Explorer les catégories</h2><ChevronRight size={24}/></div><div className="market-mini-grid category-mini-grid">{categories.slice(0, 4).map(category => <Link key={category.id} to={`/catalog?category=${category.id}`} className="panel-category"><div><SmartImage src={category.image_url} alt={category.name} fit="cover" width={400} sizes="(max-width: 760px) 44vw, 260px"/></div><strong>{category.name}</strong></Link>)}</div><Link className="panel-link" to="/catalog?view=categories">Toutes les catégories</Link></article>

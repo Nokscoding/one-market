@@ -44,13 +44,19 @@ export default function Catalog() {
     setError('')
 
     ;(async () => {
-      const result = await supabase.rpc('market_catalog_products', {
-        p_query: q.trim() || null,
-        p_category: category || null,
-        p_limit: 120,
-        p_offset: 0,
-      })
+      const [result, productAds, categoryAds] = await Promise.all([
+        supabase.rpc('market_catalog_products', {
+          p_query: q.trim() || null,
+          p_category: category || null,
+          p_limit: 120,
+          p_offset: 0,
+        }),
+        supabase.rpc('list_active_ads',{ p_placement:'catalog_product', p_limit:100 }),
+        supabase.rpc('list_active_ads',{ p_placement:'category_top', p_limit:100 }),
+      ])
       if (result.error) throw result.error
+      if (productAds.error) throw productAds.error
+      if (categoryAds.error) throw categoryAds.error
       if (!active) return
 
       let list = result.data || []
@@ -60,6 +66,17 @@ export default function Catalog() {
       else if (sort === 'price_asc') list.sort((a, b) => Number(a.price) - Number(b.price))
       else if (sort === 'price_desc') list.sort((a, b) => Number(b.price) - Number(a.price))
       else list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+      const paidProductIds = new Set((productAds.data || []).map(ad => ad.product_id).filter(Boolean))
+      const categoryStoreIds = new Set((categoryAds.data || []).filter(ad => category && ad.category_id === category).map(ad => ad.store_id))
+      const categoryFeaturedIds = new Set()
+      for (const product of list) {
+        if (categoryStoreIds.has(product.store_id) && ![...categoryFeaturedIds].some(id => list.find(row => row.id === id)?.store_id === product.store_id)) {
+          categoryFeaturedIds.add(product.id)
+        }
+      }
+      list = list.map(product => ({ ...product, sponsored: paidProductIds.has(product.id) || categoryFeaturedIds.has(product.id) }))
+      list.sort((a,b) => Number(Boolean(b.sponsored)) - Number(Boolean(a.sponsored)))
 
       setProducts(list)
     })().catch(loadError => {

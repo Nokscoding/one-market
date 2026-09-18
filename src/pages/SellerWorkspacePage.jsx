@@ -7,6 +7,7 @@ import {
   Edit3,
   Eye,
   LayoutDashboard,
+  Megaphone,
   MessageCircle,
   Package,
   Plus,
@@ -24,6 +25,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import CloudinaryImageField from '../components/CloudinaryImageField'
 import Loader from '../components/Loader'
 import SellerProductEditor from '../components/SellerProductEditor'
+import SellerAdsPanel from '../components/SellerAdsPanel'
 import SmartImage from '../components/SmartImage'
 import { useAuth } from '../context/AuthContext'
 import { money, paymentStatus, sellerOrderStatus } from '../lib/format'
@@ -384,7 +386,7 @@ export default function SellerWorkspacePage() {
 
   if (isAdmin && !stores.length) return <main className="section-shell seller-empty-admin"><h1>Aucune boutique disponible</h1></main>
 
-  const tabTitle = { overview: 'Tableau de bord', products: 'Produits', orders: 'Commandes', finances: 'Finances', messages: 'Messages', store: 'Boutique et paramètres' }[tab] || 'Tableau de bord'
+  const tabTitle = { overview: 'Tableau de bord', products: 'Produits', orders: 'Commandes', finances: 'Finances', ads: 'One Market Ads', messages: 'Messages', store: 'Boutique et paramètres' }[tab] || 'Tableau de bord'
 
   return (
     <main className="seller-workspace seller-workspace--final">
@@ -397,6 +399,7 @@ export default function SellerWorkspacePage() {
           <button className={tab === 'products' ? 'active' : ''} onClick={() => changeTab('products')}><Boxes size={19}/><span>Produits</span><em>{products.length}</em></button>
           <button className={tab === 'orders' ? 'active' : ''} onClick={() => changeTab('orders')}><ClipboardList size={19}/><span>Commandes</span>{stats.pendingOrders > 0 && <em className="alert">{stats.pendingOrders}</em>}</button>
           <button className={tab === 'finances' ? 'active' : ''} onClick={() => changeTab('finances')}><WalletCards size={19}/><span>Finances</span></button>
+          <button className={tab === 'ads' ? 'active' : ''} onClick={() => changeTab('ads')}><Megaphone size={19}/><span>One Market Ads</span></button>
           <button className={tab === 'messages' ? 'active' : ''} onClick={() => changeTab('messages')}><MessageCircle size={19}/><span>Messages</span><em>{conversations.length}</em></button>
           <button className={tab === 'store' ? 'active' : ''} onClick={() => changeTab('store')}><Settings size={19}/><span>Boutique</span></button>
         </nav>
@@ -461,6 +464,8 @@ export default function SellerWorkspacePage() {
           </div>
           <section className="seller-panel"><div className="seller-panel-head"><div><h2>Historique des versements</h2><p>Ces informations sont en lecture seule. Les paiements sont validés par One Market.</p></div></div><div className="seller-payout-table"><div className="seller-payout-head"><span>Référence</span><span>Période</span><span>Montant net</span><span>Statut</span></div>{payouts.map(payout => <div key={payout.id}><span><strong>{payout.payout_number}</strong><small>{payout.payment_method || 'Mode à confirmer'}</small></span><span>{formatDate(payout.period_start)} – {formatDate(payout.period_end)}</span><strong>{money(payout.net_amount, payout.currency)}</strong><span className={`status-pill ${payout.status}`}>{payout.status === 'paid' ? 'Payé' : payout.status === 'approved' ? 'Approuvé' : payout.status === 'failed' ? 'Échec' : payout.status === 'cancelled' ? 'Annulé' : 'En attente'}</span></div>)}{!payouts.length && <div className="seller-empty"><WalletCards size={26}/><strong>Aucun versement enregistré</strong><span>Les versements apparaîtront ici lorsqu’ils seront préparés par One Market.</span></div>}</div></section>
         </section>}
+
+        {!workspaceLoading && tab === 'ads' && <SellerAdsPanel store={selectedStore} products={products} categories={categories}/>}
 
         {!workspaceLoading && tab === 'messages' && <section className="seller-panel"><div className="seller-panel-head"><div><h2>Messages clients</h2><p>Conversations liées aux commandes de votre boutique.</p></div></div><div className="seller-conversation-list">{conversations.map(conversation => { const sellerOrder = orderById[conversation.seller_order_id]; const parent = sellerOrder ? parentOrders[sellerOrder.order_id] : null; return <Link to={`/chat/${conversation.id}`} key={conversation.id}><MessageCircle size={20}/><span><strong>{parent?.shipping_snapshot?.full_name || 'Client One Market'}</strong><small>{sellerOrder?.seller_order_number || 'Conversation boutique'} · {formatDate(conversation.updated_at)}</small></span><ChevronRight size={18}/></Link> })}{!conversations.length && <div className="seller-empty"><MessageCircle size={27}/><strong>Aucune conversation</strong><span>Les discussions liées aux commandes apparaîtront ici.</span></div>}</div></section>}
 

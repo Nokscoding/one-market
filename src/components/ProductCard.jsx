@@ -22,6 +22,7 @@ export default function ProductCard({ product, priority = false }) {
   const isPopular = reviewCount >= 3 && rating >= 4.2
   const stock = Number(product.stock_qty) || 0
   const showStock = !product.has_variants
+  const sponsored = Boolean(product.sponsored)
 
   return (
     <>
@@ -39,7 +40,7 @@ export default function ProductCard({ product, priority = false }) {
               fetchPriority={priority ? 'high' : undefined}
             />
           </Link>
-          <div className="product-badges">{discount > 0 && <span className="product-badge product-badge--promo">-{discount}%</span>}{isNew && <span className="product-badge product-badge--new">Nouveau</span>}{isPopular && <span className="product-badge product-badge--popular">Populaire</span>}</div>
+          <div className="product-badges">{sponsored && <span className="product-badge product-badge--sponsored">Sponsorisé</span>}{discount > 0 && <span className="product-badge product-badge--promo">-{discount}%</span>}{isNew && <span className="product-badge product-badge--new">Nouveau</span>}{isPopular && <span className="product-badge product-badge--popular">Populaire</span>}</div>
           <FavoriteButton productId={product.id} className="favorite-button--card"/>
           <button className="product-quick-button" onClick={() => setQuickView(true)} aria-label={`Aperçu rapide de ${product.name}`}><Eye size={17}/><span>Aperçu</span></button>
         </div>
