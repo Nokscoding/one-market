@@ -7,13 +7,13 @@ import { supabase } from '../lib/supabase'
 import AccountPage from '../pages/AccountPage'
 import SellerApplicationGate from './SellerApplicationGate'
 
-const SELLER_ROLES = new Set(['seller', 'admin', 'global_admin'])
+const ADMIN_ROLES = new Set(['admin', 'global_admin'])
 
 export default function AccountSellerGateway() {
   const { user, profile } = useAuth()
   const [params, setParams] = useSearchParams()
   const [application, setApplication] = useState(null)
-  const isSeller = SELLER_ROLES.has(profile?.role)
+  const isSeller = Boolean(profile?.seller_enabled) || ADMIN_ROLES.has(profile?.role)
   const applicationOpen = !isSeller && params.get('seller') === 'apply'
 
   useEffect(() => {

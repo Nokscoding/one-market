@@ -8,7 +8,7 @@ import AllMenuDrawer from './AllMenuDrawer'
 import Logo from './Logo'
 import NotificationCenter from './NotificationCenter'
 
-const SELLER_ROLES = new Set(['seller', 'admin', 'global_admin'])
+const ADMIN_ROLES = new Set(['admin', 'global_admin'])
 
 export default function Header() {
   const [open, setOpen] = useState(false)
@@ -25,7 +25,7 @@ export default function Header() {
   }
 
   const firstName = profile?.full_name?.trim()?.split(' ')?.[0]
-  const sellerLabel = SELLER_ROLES.has(profile?.role) ? 'Accéder à ma boutique' : 'Devenir vendeur'
+  const sellerLabel = (Boolean(profile?.seller_enabled) || ADMIN_ROLES.has(profile?.role)) ? 'Accéder à ma boutique' : 'Devenir vendeur'
 
   const mobileNav = (
     <nav className="mobile-bottom-nav" aria-label="Navigation mobile">

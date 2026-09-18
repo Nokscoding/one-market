@@ -4,11 +4,11 @@ import SellerApplicationGate from '../components/SellerApplicationGate'
 import { useAuth } from '../context/AuthContext'
 import SellerWorkspacePage from './SellerWorkspacePage'
 
-const SELLER_ROLES = new Set(['seller', 'admin', 'global_admin'])
+const ADMIN_ROLES = new Set(['admin', 'global_admin'])
 
 export default function SellerAccessPage() {
   const { profile, profileLoading } = useAuth()
-  const isSeller = SELLER_ROLES.has(profile?.role)
+  const isSeller = Boolean(profile?.seller_enabled) || ADMIN_ROLES.has(profile?.role)
 
   if (profileLoading) return <Loader fullscreen />
   if (isSeller) return <SellerApplicationGate><SellerWorkspacePage /></SellerApplicationGate>
