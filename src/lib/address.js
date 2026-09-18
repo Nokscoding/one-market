@@ -26,6 +26,7 @@ export function blankAddress(profile = {}) {
     country_code: 'CD',
     city: 'Lubumbashi',
     state_region: 'Haut-Katanga',
+    commune: '',
     district: '',
     address_line1: '',
     building: '',
@@ -43,7 +44,7 @@ export function validateAddress(form) {
   if (!form.full_name?.trim()) return 'Indiquez le nom complet du destinataire.'
   if (!form.phone?.trim()) return 'Ajoutez un numéro de téléphone pour que le livreur puisse vous contacter.'
   if (!form.city?.trim()) return 'Choisissez une ville de livraison.'
-  if (!form.district?.trim()) return 'Complétez votre commune ou votre quartier avant de continuer.'
+  if (!form.district?.trim()) return 'Complétez votre quartier avant de continuer.'
   if (!form.address_line1?.trim()) return 'Indiquez votre rue ou avenue.'
   if (form.address_type === 'other' && !form.label?.trim()) return 'Donnez un nom à cette adresse.'
   return ''
@@ -61,6 +62,7 @@ export function addressPayload(form, customerId) {
     country_code: 'CD',
     city: form.city.trim(),
     state_region: form.state_region?.trim() || null,
+    commune: form.commune?.trim() || null,
     district: form.district.trim(),
     address_line1: form.address_line1.trim(),
     building: form.building?.trim() || null,
@@ -68,14 +70,14 @@ export function addressPayload(form, customerId) {
     landmark: form.landmark?.trim() || null,
     address_line2: form.address_line2?.trim() || null,
     instructions: form.instructions?.trim() || null,
-    latitude: Number.isFinite(Number(form.latitude)) ? Number(form.latitude) : null,
-    longitude: Number.isFinite(Number(form.longitude)) ? Number(form.longitude) : null,
+    latitude: form.latitude !== null && form.latitude !== '' && Number.isFinite(Number(form.latitude)) ? Number(form.latitude) : null,
+    longitude: form.longitude !== null && form.longitude !== '' && Number.isFinite(Number(form.longitude)) ? Number(form.longitude) : null,
     is_default: Boolean(form.is_default),
   }
 }
 
 export function addressLines(address = {}) {
-  const line1 = [address.address_line1, address.building, address.apartment].filter(Boolean).join(', ')
-  const line2 = [address.district, address.city, address.state_region].filter(Boolean).join(', ')
+  const line1 = [address.address_line1, address.address_line2, address.building, address.apartment].filter(Boolean).join(', ')
+  const line2 = [address.district, address.commune, address.city, address.state_region].filter(Boolean).join(', ')
   return [line1, line2, address.landmark ? `Repère : ${address.landmark}` : ''].filter(Boolean)
 }

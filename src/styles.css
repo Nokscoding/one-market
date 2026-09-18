@@ -30,6 +30,7 @@
 @import './styles/image-system.css';
 @import './styles/catalog-media-polish.css';
 @import './styles/phase2-polish.css';
+@import './styles/account-seller-hotfix.css';
 
 .seller-return-site {
   position: fixed;

@@ -47,6 +47,10 @@ function HomePromoCarousel({ config }) {
   const [index, setIndex] = useState(0)
   const [paused, setPaused] = useState(false)
   const touchStart = useRef(null)
+  const promoHeightDesktop = Math.max(180, Math.min(640, Number(config?.desktop_height) || 320))
+  const promoHeightMobile = Math.max(140, Math.min(520, Number(config?.mobile_height) || 240))
+  const promoFit = config?.media_fit === 'contain' ? 'contain' : 'cover'
+  const promoStyle = { '--promo-height-desktop': `${promoHeightDesktop}px`, '--promo-height-mobile': `${promoHeightMobile}px`, '--promo-fit': promoFit }
 
   useEffect(() => { if (index >= slides.length) setIndex(0) }, [index, slides.length])
   useEffect(() => {
@@ -59,7 +63,7 @@ function HomePromoCarousel({ config }) {
   if (!slides.length) return null
   const go = direction => setIndex(current => (current + direction + slides.length) % slides.length)
 
-  return <section className="section-shell home-promo-carousel" aria-label="Publicités et promotions" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onTouchStart={event => { touchStart.current = event.touches?.[0]?.clientX ?? null; setPaused(true) }} onTouchEnd={event => { const start = touchStart.current; const end = event.changedTouches?.[0]?.clientX; if (Number.isFinite(start) && Number.isFinite(end) && Math.abs(end - start) > 45) go(end < start ? 1 : -1); touchStart.current = null; setPaused(false) }}>
+  return <section className="section-shell home-promo-carousel" style={promoStyle} aria-label="Publicités et promotions" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onTouchStart={event => { touchStart.current = event.touches?.[0]?.clientX ?? null; setPaused(true) }} onTouchEnd={event => { const start = touchStart.current; const end = event.changedTouches?.[0]?.clientX; if (Number.isFinite(start) && Number.isFinite(end) && Math.abs(end - start) > 45) go(end < start ? 1 : -1); touchStart.current = null; setPaused(false) }}>
     <div className="home-promo-stage">
       <div className="home-promo-track" style={{ transform: `translate3d(-${index * 100}%,0,0)` }}>
         {slides.map((slide, slideIndex) => {
@@ -68,7 +72,7 @@ function HomePromoCarousel({ config }) {
           const external = href && !href.startsWith('/')
           const media = type === 'video'
             ? <video src={slide.url} autoPlay={slideIndex === index} muted loop playsInline preload={slideIndex === index ? 'metadata' : 'none'} aria-label={slide.alt || slide.title || 'Promotion One Market'}/>
-            : <SmartImage src={slide.url} alt={slide.alt || slide.title || 'Promotion One Market'} fit="cover" width={1600} sizes="100vw" loading={slideIndex === 0 ? 'eager' : 'lazy'} fetchPriority={slideIndex === 0 ? 'high' : undefined}/>
+            : <SmartImage src={slide.url} alt={slide.alt || slide.title || 'Promotion One Market'} fit={promoFit} width={1600} sizes="100vw" loading={slideIndex === 0 ? 'eager' : 'lazy'} fetchPriority={slideIndex === 0 ? 'high' : undefined}/>
           const body = <>{media}{slide.title ? <span className="home-promo-caption">{slide.title}</span> : null}</>
           return <article className="home-promo-slide" key={slide.id || `${slide.url}-${slideIndex}`} aria-hidden={slideIndex !== index}>{href ? <a href={href} target={external && slide.target_blank !== false ? '_blank' : undefined} rel={external && slide.target_blank !== false ? 'noreferrer' : undefined}>{body}</a> : <div className="home-promo-media">{body}</div>}</article>
         })}
