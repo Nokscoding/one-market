@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Megaphone,
   MessageCircle,
+  MapPin,
   Package,
   Plus,
   Save,
@@ -52,6 +53,18 @@ const EMPTY_STORE = {
   whatsapp_business: '',
 }
 
+const EMPTY_PICKUP = {
+  contact_name: '',
+  phone: '',
+  address_line: '',
+  district: '',
+  city: 'Lubumbashi',
+  landmark: '',
+  instructions: '',
+  latitude: '',
+  longitude: '',
+}
+
 function slugify(value) {
   return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
 }
@@ -81,6 +94,26 @@ function storeToForm(store) {
   }
 }
 
+function pickupToForm(pickup, store) {
+  if (!pickup) return {
+    ...EMPTY_PICKUP,
+    contact_name: store?.name || '',
+    phone: store?.phone || '',
+    city: store?.city || 'Lubumbashi',
+  }
+  return {
+    contact_name: pickup.contact_name || store?.name || '',
+    phone: pickup.phone || store?.phone || '',
+    address_line: pickup.address_line || '',
+    district: pickup.district || '',
+    city: pickup.city || store?.city || 'Lubumbashi',
+    landmark: pickup.landmark || '',
+    instructions: pickup.instructions || '',
+    latitude: pickup.latitude ?? '',
+    longitude: pickup.longitude ?? '',
+  }
+}
+
 function actionForOrder(status) {
   return {
     pending: { action: 'confirm', label: 'Confirmer la commande' },
@@ -99,6 +132,8 @@ export default function SellerWorkspacePage() {
   const [stores, setStores] = useState([])
   const [selectedStoreId, setSelectedStoreId] = useState('')
   const [storeForm, setStoreForm] = useState(EMPTY_STORE)
+  const [pickup, setPickup] = useState(null)
+  const [pickupForm, setPickupForm] = useState(EMPTY_PICKUP)
   const [products, setProducts] = useState([])
   const [productImages, setProductImages] = useState({})
   const [productVariants, setProductVariants] = useState({})
@@ -110,6 +145,7 @@ export default function SellerWorkspacePage() {
   const [loading, setLoading] = useState(true)
   const [workspaceLoading, setWorkspaceLoading] = useState(false)
   const [storeSaving, setStoreSaving] = useState(false)
+  const [pickupSaving, setPickupSaving] = useState(false)
   const [actionSaving, setActionSaving] = useState('')
   const [feedback, setFeedback] = useState('')
   const [productSearch, setProductSearch] = useState('')
@@ -147,7 +183,34 @@ export default function SellerWorkspacePage() {
 
   const selectedStore = useMemo(() => stores.find(store => store.id === selectedStoreId) || null, [stores, selectedStoreId])
 
-  useEffect(() => { setStoreForm(storeToForm(selectedStore)) }, [selectedStore])
+  useEffect(() => {
+    setStoreForm(storeToForm(selectedStore))
+    if (!selectedStore?.id) {
+      setPickup(null)
+      setPickupForm({ ...EMPTY_PICKUP })
+      return
+    }
+
+    let active = true
+    supabase
+      .from('store_pickup_points')
+      .select('store_id,contact_name,phone,address_line,district,city,landmark,instructions,latitude,longitude,updated_at')
+      .eq('store_id', selectedStore.id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!active) return
+        if (error) {
+          logTechnicalError('seller-pickup-load', error)
+          setPickup(null)
+          setPickupForm(pickupToForm(null, selectedStore))
+          return
+        }
+        setPickup(data || null)
+        setPickupForm(pickupToForm(data, selectedStore))
+      })
+
+    return () => { active = false }
+  }, [selectedStore])
 
   async function loadWorkspace(storeId = selectedStoreId) {
     if (!storeId) return
@@ -287,6 +350,41 @@ export default function SellerWorkspacePage() {
     } finally { setStoreSaving(false) }
   }
 
+  async function savePickup(event) {
+    event.preventDefault()
+    if (!selectedStore || pickupSaving) return
+    if (!pickupForm.phone.trim()) return setFeedback('Le numéro de contact pour le ramassage est obligatoire.')
+    if (!pickupForm.address_line.trim()) return setFeedback('L’adresse de ramassage est obligatoire.')
+
+    setPickupSaving(true)
+    setFeedback('')
+    try {
+      const latitude = pickupForm.latitude === '' ? null : Number(pickupForm.latitude)
+      const longitude = pickupForm.longitude === '' ? null : Number(pickupForm.longitude)
+      const { data, error } = await supabase.rpc('seller_upsert_pickup_point', {
+        p_store_id: selectedStore.id,
+        p_contact_name: pickupForm.contact_name.trim() || selectedStore.name,
+        p_phone: pickupForm.phone.trim(),
+        p_address_line: pickupForm.address_line.trim(),
+        p_district: pickupForm.district.trim() || null,
+        p_city: pickupForm.city.trim() || selectedStore.city || 'Lubumbashi',
+        p_landmark: pickupForm.landmark.trim() || null,
+        p_instructions: pickupForm.instructions.trim() || null,
+        p_latitude: Number.isFinite(latitude) ? latitude : null,
+        p_longitude: Number.isFinite(longitude) ? longitude : null,
+      })
+      if (error) throw error
+      setPickup(data || null)
+      setPickupForm(pickupToForm(data, selectedStore))
+      setFeedback('Adresse de ramassage enregistrée. Elle est privée et visible uniquement par One Market et le livreur assigné.')
+    } catch (pickupError) {
+      logTechnicalError('seller-pickup-save', pickupError)
+      setFeedback(userError(pickupError, 'seller'))
+    } finally {
+      setPickupSaving(false)
+    }
+  }
+
   async function toggleProduct(product) {
     setFeedback('')
     try {
@@ -321,7 +419,7 @@ export default function SellerWorkspacePage() {
       const result = await supabase.rpc('seller_order_action', { p_seller_order_id: order.id, p_action: action, p_reason: reason })
       if (result.error) throw result.error
       setOrders(current => current.map(item => item.id === order.id ? result.data : item))
-      if (action === 'ready') setFeedback('Commande prête. One Market peut maintenant organiser sa prise en charge par le livreur.')
+      if (action === 'ready') setFeedback('Commande prête. Dès que toutes les boutiques de cette commande sont prêtes, One Market assigne automatiquement un livreur disponible pour le ramassage puis la livraison.')
       if (action === 'refuse') setFeedback('La commande a été refusée. Le client sera informé.')
     } catch (actionError) {
       logTechnicalError('seller-order-action', actionError)
@@ -448,7 +546,8 @@ export default function SellerWorkspacePage() {
               <div className="seller-order-lines">{lines.map(line => <div key={line.id}><SmartImage src={line.product_image_url} alt={line.product_name} fit="contain" width={90}/><span><strong>{line.product_name}</strong>{Object.keys(line.variant_snapshot || {}).length > 0 && <small>{Object.values(line.variant_snapshot).join(' · ')}</small>}<small>{line.quantity} × {money(line.unit_price, line.currency)}</small></span><strong>{money(line.line_total, line.currency)}</strong></div>)}</div>
               <div className="seller-order-financial-row"><span>Vente brute <strong>{money(order.subtotal, order.currency)}</strong></span><span>Commission One Market ({Number(order.commission_percent || 0).toFixed(2)} %) <strong>{money(order.commission_amount, order.currency)}</strong></span><span>Votre montant <strong>{money(order.seller_net_amount, order.currency)}</strong></span></div>
               {paymentBlocked && <div className="seller-order-handoff"><WalletCards size={18}/><span><strong>Paiement Mobile Money en attente</strong><small>One Market doit confirmer le paiement avant le début de la préparation. Vous pouvez toujours refuser la commande si nécessaire.</small></span></div>}
-              {order.status === 'ready' && <div className="seller-order-handoff"><Truck size={18}/><span><strong>Commande prête</strong><small>Le vendeur n’a plus à modifier la livraison. One Market prend en charge les étapes de récupération et de livraison.</small></span></div>}
+              {!pickup?.address_line && ['preparing','ready'].includes(order.status) && <div className="seller-order-handoff warning"><MapPin size={18}/><span><strong>Adresse de ramassage à compléter</strong><small>Ajoutez l’adresse privée et le numéro de contact de votre boutique pour que One Market puisse envoyer un livreur.</small></span><button type="button" className="button secondary" onClick={() => changeTab('store')}>Configurer</button></div>}
+              {order.status === 'ready' && <div className="seller-order-handoff"><Truck size={18}/><span><strong>Commande prête pour ramassage</strong><small>One Market assigne automatiquement un livreur disponible dès que toutes les boutiques concernées sont prêtes.</small></span></div>}
               {order.status === 'refused' && <div className="refusal-box"><strong>Commande refusée</strong><p>{order.refusal_reason}</p></div>}
               <footer>{action && <button className="button primary" disabled={actionSaving === order.id || paymentBlocked} onClick={() => runOrderAction(order, action.action)}>{paymentBlocked ? 'En attente du paiement' : actionSaving === order.id ? 'Mise à jour…' : action.label}</button>}{['pending','confirmed'].includes(order.status) && <button className="button secondary danger" disabled={actionSaving === order.id} onClick={() => setRefusal({ order, reason: '' })}>Refuser</button>}</footer>
             </article>
@@ -469,7 +568,7 @@ export default function SellerWorkspacePage() {
 
         {!workspaceLoading && tab === 'messages' && <section className="seller-panel"><div className="seller-panel-head"><div><h2>Messages clients</h2><p>Conversations liées aux commandes de votre boutique.</p></div></div><div className="seller-conversation-list">{conversations.map(conversation => { const sellerOrder = orderById[conversation.seller_order_id]; const parent = sellerOrder ? parentOrders[sellerOrder.order_id] : null; return <Link to={`/chat/${conversation.id}`} key={conversation.id}><MessageCircle size={20}/><span><strong>{parent?.shipping_snapshot?.full_name || 'Client One Market'}</strong><small>{sellerOrder?.seller_order_number || 'Conversation boutique'} · {formatDate(conversation.updated_at)}</small></span><ChevronRight size={18}/></Link> })}{!conversations.length && <div className="seller-empty"><MessageCircle size={27}/><strong>Aucune conversation</strong><span>Les discussions liées aux commandes apparaîtront ici.</span></div>}</div></section>}
 
-        {!workspaceLoading && tab === 'store' && <section className="seller-panel seller-store-settings"><div className="seller-panel-head"><div><h2>Boutique et paramètres</h2><p>Informations publiques, identité visuelle et contacts.</p></div></div><form onSubmit={saveStore} className="seller-store-form seller-store-form--final"><label>Nom de la boutique<input required value={storeForm.name} onChange={event => setStoreForm({ ...storeForm, name: event.target.value })}/></label><label>Ville<input value={storeForm.city} onChange={event => setStoreForm({ ...storeForm, city: event.target.value })}/></label><label>Catégorie principale<select value={storeForm.primary_category_id} onChange={event => setStoreForm({ ...storeForm, primary_category_id: event.target.value })}><option value="">Non précisée</option>{categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label><label>Téléphone<input value={storeForm.phone} onChange={event => setStoreForm({ ...storeForm, phone: event.target.value })}/></label><label className="wide">Description<textarea rows={5} value={storeForm.description} onChange={event => setStoreForm({ ...storeForm, description: event.target.value })}/></label><CloudinaryImageField className="wide" label="Logo" value={storeForm.logo_url} folder={`one-market/stores/${selectedStoreId}`} onChange={url => setStoreForm(current => ({ ...current, logo_url: url }))} fit="contain"/><CloudinaryImageField className="wide" label="Bannière" value={storeForm.banner_url} folder={`one-market/stores/${selectedStoreId}`} onChange={url => setStoreForm(current => ({ ...current, banner_url: url }))}/><label>Site web<input value={storeForm.website_url} onChange={event => setStoreForm({ ...storeForm, website_url: event.target.value })} placeholder="https://…"/></label><label>WhatsApp Business<input value={storeForm.whatsapp_business} onChange={event => setStoreForm({ ...storeForm, whatsapp_business: event.target.value })}/></label><label>Instagram<input value={storeForm.instagram_url} onChange={event => setStoreForm({ ...storeForm, instagram_url: event.target.value })}/></label><label>TikTok<input value={storeForm.tiktok_url} onChange={event => setStoreForm({ ...storeForm, tiktok_url: event.target.value })}/></label><label>Facebook<input value={storeForm.facebook_url} onChange={event => setStoreForm({ ...storeForm, facebook_url: event.target.value })}/></label><label>LinkedIn<input value={storeForm.linkedin_url} onChange={event => setStoreForm({ ...storeForm, linkedin_url: event.target.value })}/></label><div className="seller-form-actions wide"><button className="button primary" disabled={storeSaving}><Save size={17}/>{storeSaving ? 'Enregistrement…' : 'Enregistrer'}</button></div></form></section>}
+        {!workspaceLoading && tab === 'store' && <section className="seller-panel seller-store-settings"><div className="seller-panel-head"><div><h2>Boutique et paramètres</h2><p>Informations publiques, identité visuelle et contacts.</p></div></div><form onSubmit={saveStore} className="seller-store-form seller-store-form--final"><label>Nom de la boutique<input required value={storeForm.name} onChange={event => setStoreForm({ ...storeForm, name: event.target.value })}/></label><label>Ville<input value={storeForm.city} onChange={event => setStoreForm({ ...storeForm, city: event.target.value })}/></label><label>Catégorie principale<select value={storeForm.primary_category_id} onChange={event => setStoreForm({ ...storeForm, primary_category_id: event.target.value })}><option value="">Non précisée</option>{categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label><label>Téléphone<input value={storeForm.phone} onChange={event => setStoreForm({ ...storeForm, phone: event.target.value })}/></label><label className="wide">Description<textarea rows={5} value={storeForm.description} onChange={event => setStoreForm({ ...storeForm, description: event.target.value })}/></label><CloudinaryImageField className="wide" label="Logo" value={storeForm.logo_url} folder={`one-market/stores/${selectedStoreId}`} onChange={url => setStoreForm(current => ({ ...current, logo_url: url }))} fit="contain"/><CloudinaryImageField className="wide" label="Bannière" value={storeForm.banner_url} folder={`one-market/stores/${selectedStoreId}`} onChange={url => setStoreForm(current => ({ ...current, banner_url: url }))}/><label>Site web<input value={storeForm.website_url} onChange={event => setStoreForm({ ...storeForm, website_url: event.target.value })} placeholder="https://…"/></label><label>WhatsApp Business<input value={storeForm.whatsapp_business} onChange={event => setStoreForm({ ...storeForm, whatsapp_business: event.target.value })}/></label><label>Instagram<input value={storeForm.instagram_url} onChange={event => setStoreForm({ ...storeForm, instagram_url: event.target.value })}/></label><label>TikTok<input value={storeForm.tiktok_url} onChange={event => setStoreForm({ ...storeForm, tiktok_url: event.target.value })}/></label><label>Facebook<input value={storeForm.facebook_url} onChange={event => setStoreForm({ ...storeForm, facebook_url: event.target.value })}/></label><label>LinkedIn<input value={storeForm.linkedin_url} onChange={event => setStoreForm({ ...storeForm, linkedin_url: event.target.value })}/></label><div className="seller-form-actions wide"><button className="button primary" disabled={storeSaving}><Save size={17}/>{storeSaving ? 'Enregistrement…' : 'Enregistrer'}</button></div></form><div className="seller-pickup-divider"/><div className="seller-panel-head seller-pickup-head"><div><h2><MapPin size={19}/> Ramassage One Market</h2><p>Adresse privée utilisée uniquement par One Market et le livreur assigné. Elle n’est pas affichée aux clients.</p></div><span className={`seller-pickup-state ${pickup?.address_line ? 'ready' : ''}`}>{pickup?.address_line ? 'Configuré' : 'À configurer'}</span></div><form onSubmit={savePickup} className="seller-store-form seller-store-form--final"><label>Contact de ramassage<input value={pickupForm.contact_name} onChange={event => setPickupForm({ ...pickupForm, contact_name: event.target.value })} placeholder="Nom du responsable"/></label><label>Téléphone du vendeur<input required value={pickupForm.phone} onChange={event => setPickupForm({ ...pickupForm, phone: event.target.value })} placeholder="Ex. 099…"/></label><label className="wide">Adresse exacte de ramassage<input required value={pickupForm.address_line} onChange={event => setPickupForm({ ...pickupForm, address_line: event.target.value })} placeholder="Avenue, numéro, bâtiment…"/></label><label>Quartier / commune<input value={pickupForm.district} onChange={event => setPickupForm({ ...pickupForm, district: event.target.value })}/></label><label>Ville<input value={pickupForm.city} onChange={event => setPickupForm({ ...pickupForm, city: event.target.value })}/></label><label className="wide">Point de repère<input value={pickupForm.landmark} onChange={event => setPickupForm({ ...pickupForm, landmark: event.target.value })} placeholder="Ex. en face de…, portail bleu…"/></label><label className="wide">Instructions au livreur<textarea rows={3} value={pickupForm.instructions} onChange={event => setPickupForm({ ...pickupForm, instructions: event.target.value })} placeholder="Horaires, personne à demander, accès…"/></label><label>Latitude (optionnel)<input inputMode="decimal" value={pickupForm.latitude} onChange={event => setPickupForm({ ...pickupForm, latitude: event.target.value })}/></label><label>Longitude (optionnel)<input inputMode="decimal" value={pickupForm.longitude} onChange={event => setPickupForm({ ...pickupForm, longitude: event.target.value })}/></label><div className="seller-form-actions wide"><button className="button primary" disabled={pickupSaving}><Truck size={17}/>{pickupSaving ? 'Enregistrement…' : 'Enregistrer le point de ramassage'}</button></div></form></section>}
       </section>
 
       {refusal.order && <div className="seller-modal-backdrop" role="presentation" onMouseDown={() => setRefusal({ order: null, reason: '' })}><form className="seller-confirm-modal" onSubmit={confirmRefusal} onMouseDown={event => event.stopPropagation()}><header><div><span>Commande</span><h2>Refuser la commande</h2></div><button type="button" onClick={() => setRefusal({ order: null, reason: '' })} aria-label="Fermer"><X size={20}/></button></header><p>Expliquez brièvement la raison. Cette information peut être utilisée par One Market pour informer le client et traiter le problème.</p><label>Raison du refus<textarea required rows={4} value={refusal.reason} onChange={event => setRefusal(current => ({ ...current, reason: event.target.value }))} placeholder="Ex. Produit momentanément indisponible…"/></label><footer><button type="button" className="button secondary" onClick={() => setRefusal({ order: null, reason: '' })}>Annuler</button><button className="button primary danger">Confirmer le refus</button></footer></form></div>}

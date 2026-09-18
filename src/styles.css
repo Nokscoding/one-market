@@ -114,3 +114,17 @@
     font-size: .76rem;
   }
 }
+
+/* Seller pickup / automatic One Market dispatch */
+.seller-pickup-divider{height:1px;background:var(--line,#e3e8ef);margin:28px 0 22px}
+.seller-pickup-head{align-items:flex-start;gap:14px}
+.seller-pickup-head h2{display:flex;align-items:center;gap:8px}
+.seller-pickup-state{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;padding:7px 10px;border-radius:999px;background:#fff4e5;color:#9a6500;font-size:.72rem;font-weight:800}
+.seller-pickup-state.ready{background:#e9f8ef;color:#178046}
+.seller-order-handoff.warning{background:#fff8e7;border-color:#f1d79a;color:#7a570a}
+.seller-order-handoff.warning button{margin-left:auto;flex:0 0 auto}
+@media(max-width:680px){
+  .seller-pickup-head{flex-direction:column}
+  .seller-order-handoff.warning{align-items:flex-start;flex-wrap:wrap}
+  .seller-order-handoff.warning button{width:100%;margin-left:0;margin-top:8px}
+}
