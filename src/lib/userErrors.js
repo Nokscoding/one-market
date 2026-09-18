@@ -23,6 +23,8 @@ const DIRECT_MESSAGES = {
   SELLER_TERMS_REQUIRED: 'Vous devez accepter les conditions vendeur avant de continuer.',
   SELLER_APPLICATION_NOT_FOUND: 'Votre dossier vendeur est introuvable.',
   SELLER_ORDER_NOT_FOUND: 'Cette commande vendeur est introuvable.',
+  SELLER_STORE_FORBIDDEN: 'Cette boutique n’est pas accessible avec votre compte vendeur.',
+  PICKUP_CODE_NOT_READY: 'Le QR de ramassage sera disponible lorsque la commande sera prête.',
   INVALID_SELLER_ORDER_TRANSITION: 'Cette étape de commande n’est pas autorisée maintenant.',
   INVALID_SELLER_ORDER_ACTION: 'Cette action n’est pas disponible pour cette commande.',
   REFUSAL_REASON_REQUIRED: 'Indiquez la raison du refus de la commande.',

@@ -64,12 +64,12 @@ export default function SellerApplicationGate({ embedded = false, children = nul
       <div className="seller-legal-summary">
         <div><ShieldCheck size={18}/><span><strong>Identité vérifiée</strong><small>Les documents sensibles restent privés et servent uniquement à la vérification.</small></span></div>
         <div><CheckCircle2 size={18}/><span><strong>Informations exactes</strong><small>Produits, prix et stock doivent refléter la réalité.</small></span></div>
-        <div><BadgePercent size={18}/><span><strong>Commission générale : 30 %</strong><small>One Market applique par défaut 30 % sur le montant des produits vendus. Un taux spécifique peut être convenu pour votre boutique. Les frais de livraison ne sont pas inclus automatiquement dans cette commission.</small></span></div>
+        <div><BadgePercent size={18}/><span><strong>Commission générale : 15 %</strong><small>One Market applique 15 % sur le montant des produits vendus. Un taux spécifique peut être convenu pour votre boutique. Les frais de livraison ne sont pas inclus automatiquement dans cette commission.</small></span></div>
       </div>
 
       <label className="seller-legal-check">
         <input type="checkbox" checked={checked} onChange={event => setChecked(event.target.checked)}/>
-        <span>J’ai lu et j’accepte les <Link to="/legal/vendeurs" target="_blank">Conditions vendeur</Link>, notamment la politique de commission One Market de 30 % par défaut, ainsi que les <Link to="/legal/conditions" target="_blank">Conditions d’utilisation</Link> et la <Link to="/legal/confidentialite" target="_blank">Politique de confidentialité</Link>.</span>
+        <span>J’ai lu et j’accepte les <Link to="/legal/vendeurs" target="_blank">Conditions vendeur</Link>, notamment la politique de commission One Market de 15 %, ainsi que les <Link to="/legal/conditions" target="_blank">Conditions d’utilisation</Link> et la <Link to="/legal/confidentialite" target="_blank">Politique de confidentialité</Link>.</span>
       </label>
 
       {error && <div className="seller-application-message" role="alert">{error}</div>}

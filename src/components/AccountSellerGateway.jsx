@@ -48,8 +48,8 @@ export default function AccountSellerGateway() {
       <section className="section-shell account-seller-gateway">
         <div className="account-seller-gateway-icon"><Store size={24}/></div>
         <div className="account-seller-gateway-copy">
-          <span>{isSeller ? 'Espace vendeur actif' : inReview ? 'Demande vendeur en cours de vérification' : application ? `Dossier vendeur · ${status?.label || application.status}` : 'Vends sur One Market'}</span>
-          <strong>{isSeller ? 'Gère ta boutique, tes produits et tes commandes.' : inReview ? `${application.business_name || 'Ta boutique'} est en cours d’examen par One Market.` : application ? 'Consulte ou complète ton dossier vendeur.' : 'Crée ta boutique et commence à vendre sur la marketplace.'}</strong>
+          <span>{isSeller ? 'Compte client + vendeur' : inReview ? 'Demande vendeur en cours de vérification' : application ? `Dossier vendeur · ${status?.label || application.status}` : 'Vends sur One Market'}</span>
+          <strong>{isSeller ? 'Ton compte client garde tous ses achats et possède aussi l’accès à ta boutique.' : inReview ? `${application.business_name || 'Ta boutique'} est en cours d’examen par One Market.` : application ? 'Consulte ou complète ton dossier vendeur.' : 'Crée ta boutique et commence à vendre sur la marketplace.'}</strong>
         </div>
         {isSeller ? (
           <Link className="account-seller-gateway-action" to="/seller">Accéder à ma boutique <ArrowRight size={18}/></Link>
