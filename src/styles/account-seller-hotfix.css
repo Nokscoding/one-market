@@ -139,3 +139,10 @@
   .account-address-actions{display:grid;grid-template-columns:1fr}
   .account-address-actions button{justify-content:center}
 }
+
+.account-card{padding:20px;border:1px solid #dfe4eb;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(11,27,59,.045)}
+.profile-load-error{max-width:680px;margin:28px auto;text-align:center}
+.client-account-summary{display:grid;gap:12px}
+.account-default-address{display:flex;align-items:flex-start;gap:10px;padding:12px;border-radius:11px;background:#f4f7ff;color:#16449b}
+.client-address-panel{min-width:0}
+.seller-workspace--final{min-width:0}
