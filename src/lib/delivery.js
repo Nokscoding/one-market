@@ -3,14 +3,14 @@ export const DELIVERY_OPTIONS = [
     code: 'standard',
     label: 'Livraison normale',
     feeCdf: 5000,
-    description: 'Délai standard One Market.',
+    description: 'Livraison estimée sous 48 à 72 h.',
     short: 'Standard',
   },
   {
     code: 'express',
     label: 'Livraison express',
     feeCdf: 15000,
-    description: 'Traitement et livraison prioritaires.',
+    description: 'Livraison prioritaire estimée sous 24 h.',
     short: 'Express',
   },
 ]
