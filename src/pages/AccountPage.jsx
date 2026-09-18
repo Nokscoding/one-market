@@ -1,6 +1,7 @@
 import {
   Bell,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   CircleHelp,
   CreditCard,
@@ -69,6 +70,7 @@ export default function AccountPage() {
   const [ticketForm, setTicketForm] = useState(EMPTY_TICKET)
   const [ticketMessage, setTicketMessage] = useState('')
   const [savingTicket, setSavingTicket] = useState(false)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   useEffect(() => {
     if (!profile) return
@@ -111,6 +113,7 @@ export default function AccountPage() {
     if (nextTab === 'overview') next.delete('tab')
     else next.set('tab', nextTab)
     setParams(next)
+    setMobileNavOpen(false)
   }
 
   async function saveProfile(event) {
@@ -272,6 +275,8 @@ export default function AccountPage() {
     ['notifications', Bell, 'Notifications'],
     ['security', KeyRound, 'Sécurité'],
   ]
+  const activeNav = nav.find(([id]) => id === tab) || nav[0]
+  const ActiveNavIcon = activeNav[1]
 
   return (
     <main className="section-shell client-account-page">
@@ -282,11 +287,16 @@ export default function AccountPage() {
       </section>
 
       <div className="client-account-layout">
-        <aside className="client-account-sidebar">
-          {nav.map(([id, Icon, label]) => <button key={id} className={tab === id ? 'active' : ''} onClick={() => changeTab(id)}><Icon size={18}/><span>{label}</span>{id === 'addresses' && <em>{addresses.length}</em>}{id === 'notifications' && unreadCount > 0 && <em className="is-alert">{unreadCount}</em>}</button>)}
-          <Link to="/orders"><Package size={18}/><span>Mes commandes</span><em>{orders.length}</em></Link>
-          <Link to="/favorites"><Heart size={18}/><span>Favoris</span><em>{favorites.size}</em></Link>
-          <button className="client-account-logout" onClick={logout}><LogOut size={18}/><span>Se déconnecter</span></button>
+        <aside className={`client-account-sidebar ${mobileNavOpen ? 'is-open' : ''}`}>
+          <button className="client-account-mobile-trigger" type="button" onClick={() => setMobileNavOpen(open => !open)} aria-expanded={mobileNavOpen}>
+            <ActiveNavIcon size={19}/><span>{activeNav[2]}</span><ChevronDown size={18} className={mobileNavOpen ? 'rotated' : ''}/>
+          </button>
+          <div className="client-account-nav-list">
+            {nav.map(([id, Icon, label]) => <button key={id} className={tab === id ? 'active' : ''} onClick={() => changeTab(id)}><Icon size={18}/><span>{label}</span>{id === 'addresses' && <em>{addresses.length}</em>}{id === 'notifications' && unreadCount > 0 && <em className="is-alert">{unreadCount}</em>}</button>)}
+            <Link to="/orders" onClick={() => setMobileNavOpen(false)}><Package size={18}/><span>Mes commandes</span><em>{orders.length}</em></Link>
+            <Link to="/favorites" onClick={() => setMobileNavOpen(false)}><Heart size={18}/><span>Favoris</span><em>{favorites.size}</em></Link>
+            <button className="client-account-logout" onClick={logout}><LogOut size={18}/><span>Se déconnecter</span></button>
+          </div>
         </aside>
 
         <section className="client-account-content">

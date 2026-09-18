@@ -19,9 +19,9 @@ export const ONE_MARKET_PLUS = {
   name: 'One Market Plus',
   status: 'coming_soon',
   plans: [
-    { code: 'monthly', label: 'Mensuel', priceCdf: 15000, duration: '1 mois' },
-    { code: 'quarterly', label: '3 mois', priceCdf: 40000, duration: '3 mois' },
-    { code: 'annual', label: 'Annuel', priceCdf: 140000, duration: '12 mois' },
+    { code: 'monthly', label: 'Mensuel', priceUsd: 5, currency: 'USD', duration: '1 mois' },
+    { code: 'quarterly', label: '3 mois', priceUsd: 13.33, currency: 'USD', duration: '3 mois' },
+    { code: 'annual', label: 'Annuel', priceUsd: 46.67, currency: 'USD', duration: '12 mois' },
   ],
   benefits: [
     'Livraison normale à 0 FC pendant la période active',

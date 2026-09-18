@@ -21,3 +21,23 @@
 
 @media(max-width:1050px){.client-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.client-dashboard-grid{grid-template-columns:1fr}.client-account-layout{grid-template-columns:210px minmax(0,1fr)}}
 @media(max-width:760px){.client-account-page{padding-top:14px;padding-bottom:92px}.client-account-hero{padding:16px;border-radius:14px}.client-avatar{width:54px;height:54px}.client-account-hero-badge{display:none}.client-account-layout{display:block}.client-account-sidebar{position:static;display:flex;overflow-x:auto;gap:7px;margin-bottom:14px;padding:7px;border-radius:12px}.client-account-sidebar>a,.client-account-sidebar>button{min-width:max-content;grid-template-columns:20px auto auto;min-height:40px;padding:0 10px}.client-account-sidebar .client-account-logout{margin:0;border:0;border-radius:9px}.client-panel{padding:16px;border-radius:14px}.client-stat-grid{grid-template-columns:1fr 1fr;gap:8px}.client-stat-card{min-height:92px;grid-template-columns:30px 1fr;padding:12px}.client-stat-card>svg:last-child{display:none}.client-stat-card strong{font-size:1.2rem}.client-order-row{grid-template-columns:34px minmax(0,1fr) auto}.client-order-status,.client-order-row>b,.client-order-row>svg{display:none}.client-form-grid,.client-address-form,.client-address-grid{grid-template-columns:1fr}.client-field-wide{grid-column:1}.client-section-heading.client-heading-row{display:grid}.client-heading-row>.button{width:100%;justify-content:center}.client-form-actions{justify-content:stretch}.client-form-actions .button{flex:1}.client-account-hero-copy h1{font-size:1.45rem}}
+
+/* Mobile account dropdown navigation */
+.client-account-mobile-trigger{display:none}
+.client-account-nav-list{display:grid;gap:4px}
+.client-account-nav-list>a,.client-account-nav-list>button{width:100%;min-height:46px;display:grid;grid-template-columns:24px 1fr auto;align-items:center;gap:9px;padding:0 11px;border:0;border-radius:10px;background:transparent;color:#28364f;text-align:left;text-decoration:none;font:inherit;cursor:pointer;transition:background .16s ease,color .16s ease}
+.client-account-nav-list>a:hover,.client-account-nav-list>button:hover{background:#f4f6fa}
+.client-account-nav-list>a.active,.client-account-nav-list>button.active{background:#edf3ff;color:#0d4acb;font-weight:750}
+.client-account-nav-list em{min-width:23px;height:23px;display:grid;place-items:center;padding:0 6px;border-radius:999px;background:#eef1f5;color:#657186;font-style:normal;font-size:.7rem;font-weight:800}
+.client-account-nav-list em.is-alert{background:#eaf0ff;color:#1357e6}
+.client-account-nav-list .client-account-logout{margin-top:8px;border-top:1px solid #edf0f4;border-radius:0 0 10px 10px;color:#a23434}
+@media(max-width:760px){
+  .client-account-sidebar{position:relative!important;display:block!important;overflow:visible!important;margin-bottom:14px!important;padding:7px!important;border-radius:14px!important}
+  .client-account-sidebar>.client-account-mobile-trigger{display:grid!important;width:100%!important;min-height:52px!important;grid-template-columns:24px 1fr 20px!important;align-items:center!important;gap:10px!important;padding:0 12px!important;border:0!important;border-radius:11px!important;background:#edf3ff!important;color:#174fb9!important;text-align:left!important;font:inherit!important;font-weight:800!important;cursor:pointer!important}
+  .client-account-mobile-trigger svg:last-child{transition:transform .18s ease}
+  .client-account-mobile-trigger svg:last-child.rotated{transform:rotate(180deg)}
+  .client-account-nav-list{display:none;position:absolute;z-index:80;left:7px;right:7px;top:calc(100% + 6px);gap:4px;padding:8px;border:1px solid #dfe4eb;border-radius:13px;background:#fff;box-shadow:0 16px 38px rgba(11,27,59,.16)}
+  .client-account-sidebar.is-open .client-account-nav-list{display:grid}
+  .client-account-nav-list>a,.client-account-nav-list>button{min-height:44px;grid-template-columns:23px 1fr auto;padding:0 10px}
+  .client-account-nav-list .client-account-logout{margin-top:4px;border-top:1px solid #edf0f4;border-radius:8px}
+}

@@ -68,13 +68,17 @@ function HomePromoCarousel({ config }) {
       <div className="home-promo-track" style={{ transform: `translate3d(-${index * 100}%,0,0)` }}>
         {slides.map((slide, slideIndex) => {
           const type = slide.media_type === 'video' ? 'video' : 'image'
+          const cropX = Math.max(0, Math.min(100, Number(slide.crop_x ?? 50)))
+          const cropY = Math.max(0, Math.min(100, Number(slide.crop_y ?? 50)))
+          const cropZoom = Math.max(100, Math.min(220, Number(slide.crop_zoom ?? 100)))
+          const cropStyle = { '--promo-position-x': `${cropX}%`, '--promo-position-y': `${cropY}%`, '--promo-zoom': cropZoom / 100 }
           const href = safePromoHref(slide.link)
           const external = href && !href.startsWith('/')
           const media = type === 'video'
             ? <video src={slide.url} autoPlay={slideIndex === index} muted loop playsInline preload={slideIndex === index ? 'metadata' : 'none'} aria-label={slide.alt || slide.title || 'Promotion One Market'}/>
             : <SmartImage src={slide.url} alt={slide.alt || slide.title || 'Promotion One Market'} fit={promoFit} width={1600} sizes="100vw" loading={slideIndex === 0 ? 'eager' : 'lazy'} fetchPriority={slideIndex === 0 ? 'high' : undefined}/>
           const body = <>{media}{slide.title ? <span className="home-promo-caption">{slide.title}</span> : null}</>
-          return <article className="home-promo-slide" key={slide.id || `${slide.url}-${slideIndex}`} aria-hidden={slideIndex !== index}>{href ? <a href={href} target={external && slide.target_blank !== false ? '_blank' : undefined} rel={external && slide.target_blank !== false ? 'noreferrer' : undefined}>{body}</a> : <div className="home-promo-media">{body}</div>}</article>
+          return <article className="home-promo-slide" style={cropStyle} key={slide.id || `${slide.url}-${slideIndex}`} aria-hidden={slideIndex !== index}>{href ? <a href={href} target={external && slide.target_blank !== false ? '_blank' : undefined} rel={external && slide.target_blank !== false ? 'noreferrer' : undefined}>{body}</a> : <div className="home-promo-media">{body}</div>}</article>
         })}
       </div>
       {slides.length > 1 && <><button className="home-promo-nav prev" type="button" onClick={() => go(-1)} aria-label="Publicité précédente"><ChevronLeft size={22}/></button><button className="home-promo-nav next" type="button" onClick={() => go(1)} aria-label="Publicité suivante"><ChevronRight size={22}/></button></>}
