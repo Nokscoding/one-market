@@ -11,6 +11,7 @@ export default function NotificationPermissionPrompt() {
   const { user } = useAuth()
   const [visible, setVisible] = useState(false)
   const [requesting, setRequesting] = useState(false)
+  const [message, setMessage] = useState('')
 
   useEffect(() => {
     if (!user?.id || typeof window === 'undefined' || !('Notification' in window)) return undefined
@@ -33,12 +34,31 @@ export default function NotificationPermissionPrompt() {
   }
 
   async function enable() {
-    if (!user?.id) return
+    if (!user?.id || requesting) return
     setRequesting(true)
+    setMessage('')
     try {
-      await ensurePushSubscription({ supabase, userId: user.id, app: 'market' })
-      window.localStorage.removeItem(DISMISS_KEY)
-      setVisible(false)
+      const enabled = await ensurePushSubscription({ supabase, userId: user.id, app: 'market' })
+      if (enabled) {
+        window.localStorage.removeItem(DISMISS_KEY)
+        setVisible(false)
+        return
+      }
+
+      if (window.Notification?.permission === 'denied') {
+        setMessage('Les notifications sont bloquées dans votre navigateur. Autorisez-les dans les paramètres du site puis réessayez.')
+      } else {
+        setMessage('L’autorisation n’a pas été accordée. Appuyez à nouveau sur Activer si vous souhaitez recevoir les notifications.')
+      }
+    } catch (activationError) {
+      const raw = String(activationError?.message || '')
+      if (raw.includes('PUSH_CONFIG_MISSING')) {
+        setMessage('Les notifications One Market ne sont pas encore disponibles sur ce navigateur.')
+      } else if (raw.toLowerCase().includes('permission')) {
+        setMessage('Le navigateur a bloqué la demande. Vérifiez les autorisations du site puis réessayez.')
+      } else {
+        setMessage('Impossible d’activer les notifications pour le moment. Réessayez dans quelques instants.')
+      }
     } finally {
       setRequesting(false)
     }
@@ -51,6 +71,7 @@ export default function NotificationPermissionPrompt() {
       <button type="button" className="notification-permission-close" onClick={dismiss} aria-label="Fermer"><X size={17}/></button>
       <span className="notification-permission-icon"><BellRing size={24}/></span>
       <div><strong>Activer les notifications ?</strong><p>Recevez les mises à jour importantes concernant vos commandes, votre boutique, vos messages et votre compte, même lorsque l’onglet n’est pas au premier plan.</p></div>
+      {message && <div className="notification-permission-message" role="status">{message}</div>}
       <div className="notification-permission-actions"><button type="button" className="button primary" onClick={enable} disabled={requesting}>{requesting ? 'Activation…' : 'Activer'}</button><button type="button" className="button secondary" onClick={dismiss}>Plus tard</button></div>
     </aside>
   )

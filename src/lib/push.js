@@ -9,6 +9,13 @@ export async function ensurePushSubscription({ supabase, userId, app = 'market' 
   if (!userId || typeof window === 'undefined') return false
   if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) return false
 
+  // IMPORTANT: browser permission must be requested immediately from the user's
+  // click/tap. Doing network work first can consume the transient user activation
+  // and Chrome/Safari may silently refuse to show the native permission dialog.
+  let permission = window.Notification.permission
+  if (permission === 'default') permission = await window.Notification.requestPermission()
+  if (permission !== 'granted') return false
+
   const { data: settings, error: settingError } = await supabase
     .from('marketplace_settings')
     .select('value')
@@ -17,10 +24,6 @@ export async function ensurePushSubscription({ supabase, userId, app = 'market' 
   if (settingError) throw settingError
   const publicKey = settings?.value?.vapid_public_key
   if (!publicKey) throw new Error('PUSH_CONFIG_MISSING')
-
-  let permission = window.Notification.permission
-  if (permission === 'default') permission = await window.Notification.requestPermission()
-  if (permission !== 'granted') return false
 
   const registration = await navigator.serviceWorker.register('/sw.js')
   await navigator.serviceWorker.ready
