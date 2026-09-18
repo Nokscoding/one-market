@@ -80,7 +80,7 @@ export default function CheckoutPage() {
     ;(async () => {
       const addressResult = await supabase
         .from('addresses')
-        .select('id,address_type,label,full_name,phone,whatsapp_phone,country_code,address_line1,address_line2,district,city,state_region,instructions,is_default,building,apartment,landmark,latitude,longitude,created_at')
+        .select('id,address_type,label,full_name,phone,whatsapp_phone,country_code,address_line1,address_line2,commune,district,city,state_region,instructions,is_default,building,apartment,landmark,latitude,longitude,created_at')
         .eq('customer_id', user.id)
         .eq('country_code', 'CD')
         .order('is_default', { ascending: false })
@@ -162,7 +162,7 @@ export default function CheckoutPage() {
         if (resetResult.error) throw resetResult.error
       }
       if (!addresses.length) payload.is_default = true
-      const result = await supabase.from('addresses').insert(payload).select('id,customer_id,address_type,label,full_name,phone,whatsapp_phone,country_code,address_line1,address_line2,district,city,state_region,postal_code,instructions,is_default,building,apartment,landmark,latitude,longitude,created_at,updated_at').single()
+      const result = await supabase.from('addresses').insert(payload).select('id,customer_id,address_type,label,full_name,phone,whatsapp_phone,country_code,address_line1,address_line2,commune,district,city,state_region,postal_code,instructions,is_default,building,apartment,landmark,latitude,longitude,created_at,updated_at').single()
       if (result.error) throw result.error
       setAddresses(current => [result.data, ...current.map(address => payload.is_default ? { ...address, is_default: false } : address)])
       setSelected(result.data.id)
@@ -270,7 +270,7 @@ export default function CheckoutPage() {
                 <label>Numéro de téléphone<input required inputMode="tel" autoComplete="tel" value={form.phone} onChange={event => setForm({ ...form, phone: event.target.value })} placeholder="+243 9xx xxx xxx"/></label>
                 <label>Numéro WhatsApp <small>Facultatif</small><input inputMode="tel" value={form.whatsapp_phone} onChange={event => setForm({ ...form, whatsapp_phone: event.target.value })} placeholder="Si différent du numéro principal"/></label>
                 <label>Ville<select required value={form.city} onChange={event => chooseCity(event.target.value)}>{DELIVERY_CITIES.map(item => <option key={item.city} value={item.city}>{item.city}</option>)}</select></label>
-                <label>Commune / quartier<input required value={form.district} onChange={event => setForm({ ...form, district: event.target.value })} placeholder="Ex. Lubumbashi, Golf, Kenya…"/></label>
+                <label>Commune <small>Facultatif</small><input value={form.commune || ''} onChange={event => setForm({ ...form, commune: event.target.value })} placeholder="Ex. Lubumbashi"/></label><label>Quartier<input required value={form.district} onChange={event => setForm({ ...form, district: event.target.value })} placeholder="Ex. Golf, Kampemba…"/></label>
                 <label>Avenue / rue<input required value={form.address_line1} onChange={event => setForm({ ...form, address_line1: event.target.value })} placeholder="Ex. Avenue Kasa-Vubu"/></label>
                 <label>Numéro / parcelle <small>Facultatif</small><input value={form.address_line2} onChange={event => setForm({ ...form, address_line2: event.target.value })} placeholder="Ex. 24"/></label>
                 <label>Immeuble / résidence <small>Facultatif</small><input value={form.building} onChange={event => setForm({ ...form, building: event.target.value })} placeholder="Ex. Résidence Mwangaza"/></label>
