@@ -9,6 +9,31 @@ import { supabase } from '../lib/supabase'
 import { logTechnicalError } from '../lib/userErrors'
 import '../styles/home-promotions.css'
 
+function weightedMarketplaceShuffle(items = []) {
+  const list = [...items]
+  const size = list.length
+  return list
+    .map((item, index) => {
+      const relevanceWeight = Math.max(1, size - index)
+      const ratingWeight = 1 + Math.min(2, Number(item.rating_avg || 0) / 2.5)
+      const reviewWeight = 1 + Math.log1p(Number(item.rating_count || 0)) * 0.18
+      const weight = relevanceWeight * ratingWeight * reviewWeight
+      const random = Math.max(Number.EPSILON, Math.random())
+      return { item, key: -Math.log(random) / weight }
+    })
+    .sort((a, b) => a.key - b.key)
+    .map(entry => entry.item)
+}
+
+function shuffleMarketplaceItems(items = []) {
+  const list = [...items]
+  for (let index = list.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1))
+    ;[list[index], list[swapIndex]] = [list[swapIndex], list[index]]
+  }
+  return list
+}
+
 function MiniProduct({ product, priority = false }) {
   return <Link to={`/product/${product.id}`} className="mini-product"><div className="mini-product-image"><SmartImage src={product.image} alt={product.name} fit="cover" width={260} sizes="(max-width: 760px) 42vw, 180px" loading={priority ? 'eager' : 'lazy'} fetchPriority={priority ? 'high' : undefined}/></div><span>{product.name}</span></Link>
 }
@@ -121,15 +146,15 @@ export default function Home() {
       try {
         const [pRes, sRes, cRes] = await Promise.all([
           supabase.rpc('market_catalog_products', { p_query: null, p_category: null, p_limit: 30, p_offset: 0 }),
-          supabase.from('stores').select('id,name,slug,country_code,status,city,logo_url,is_verified,is_partner,created_at').eq('status', 'active').eq('country_code', 'CD').order('created_at', { ascending: false }).limit(8),
+          supabase.from('stores').select('id,name,slug,country_code,status,city,logo_url,is_verified,is_partner,is_demo,created_at').eq('status', 'active').eq('country_code', 'CD').order('created_at', { ascending: false }).limit(20),
           supabase.from('categories').select('id,name,image_url,sort_order,is_active').eq('is_active', true).order('sort_order').limit(8),
         ])
         if (pRes.error) throw pRes.error
         if (sRes.error) throw sRes.error
         if (cRes.error) throw cRes.error
         if (!active) return
-        setProducts(pRes.data || [])
-        setStores(sRes.data || [])
+        setProducts(weightedMarketplaceShuffle(pRes.data || []))
+        setStores(shuffleMarketplaceItems((sRes.data || []).filter(store => !/^QA TEST/i.test(String(store.name || '')))))
         setCategories(cRes.data || [])
       } catch (loadError) {
         logTechnicalError('home-data', loadError)
@@ -158,19 +183,20 @@ export default function Home() {
 
   const featured = products.slice(0, 4)
   const localSelection = products.slice(4, 8)
+  const discoveryProducts = products.slice(0, 12)
   if (loading) return <Loader fullscreen />
 
   return <main className="market-home">
     <HomePromoCarousel config={promoConfig}/>
-    <section className="market-hero-wrap"><div className="market-hero section-shell"><div className="market-hero-copy"><span>One Market</span><h1>Tout votre shopping, au même endroit.</h1><p>Achetez auprès de plusieurs boutiques en RDC et suivez vos commandes depuis un seul compte.</p><Link to="/catalog">Voir les produits <ArrowRight size={18}/></Link></div><div className="market-hero-products" aria-label="Nouveautés">{featured.length ? featured.map((product, productIndex) => <MiniProduct key={product.id} product={product} priority={productIndex < 2}/>) : <div className="market-hero-empty"><strong>Découvrez One Market.</strong><span>Parcourez les boutiques et leurs produits.</span></div>}</div></div></section>
+    <section className="market-hero-wrap"><div className="market-hero section-shell"><div className="market-hero-copy"><span>One Market</span><h1>Tout votre shopping, au même endroit.</h1><p>Achetez auprès de plusieurs boutiques en RDC et suivez vos commandes depuis un seul compte.</p><Link to="/catalog">Voir les produits <ArrowRight size={18}/></Link></div><div className="market-hero-products" aria-label="Produits recommandés">{featured.length ? featured.map((product, productIndex) => <MiniProduct key={product.id} product={product} priority={productIndex < 2}/>) : <div className="market-hero-empty"><strong>Découvrez One Market.</strong><span>Parcourez les boutiques et leurs produits.</span></div>}</div></div></section>
     <section className="section-shell marketplace-panels">
       <article className="market-panel"><div className="market-panel-title"><h2>Explorer les catégories</h2><ChevronRight size={24}/></div><div className="market-mini-grid category-mini-grid">{categories.slice(0, 4).map(category => <Link key={category.id} to={`/catalog?category=${category.id}`} className="panel-category"><div><SmartImage src={category.image_url} alt={category.name} fit="cover" width={400} sizes="(max-width: 760px) 44vw, 260px"/></div><strong>{category.name}</strong></Link>)}</div><Link className="panel-link" to="/catalog?view=categories">Toutes les catégories</Link></article>
-      <article className="market-panel"><div className="market-panel-title"><h2>Nouveautés</h2><ChevronRight size={24}/></div><div className="market-mini-grid">{featured.map(product => <MiniProduct key={product.id} product={product}/>)}</div><Link className="panel-link" to="/catalog?view=new">Voir les nouveautés</Link></article>
+      <article className="market-panel"><div className="market-panel-title"><h2>Pour vous</h2><ChevronRight size={24}/></div><div className="market-mini-grid">{featured.map(product => <MiniProduct key={product.id} product={product}/>)}</div><Link className="panel-link" to="/catalog">Voir plus de produits</Link></article>
       <article className="market-panel"><div className="market-panel-title"><h2>Shopping en RDC</h2><ChevronRight size={24}/></div><div className="market-mini-grid">{localSelection.map(product => <MiniProduct key={product.id} product={product}/>)}</div><Link className="panel-link" to="/catalog">Voir la sélection</Link></article>
       <article className="market-panel"><div className="market-panel-title"><h2>Paiement à la livraison</h2><ChevronRight size={24}/></div><div className="panel-empty">Commandez en ligne et réglez le livreur à la réception lorsque ce mode de paiement est choisi.</div><Link className="panel-link" to="/catalog">Commencer mes achats</Link></article>
     </section>
     <section className="section-shell marketplace-strip"><div><StoreIcon size={21}/><strong>Plusieurs boutiques</strong><span>Un seul marché pour vos achats.</span></div><div><Truck size={21}/><strong>Livraison en RDC</strong><span>Livraison normale ou express selon les disponibilités.</span></div><div><MessageCircle size={21}/><strong>Suivi simple</strong><span>Retrouvez vos commandes et messages depuis votre compte.</span></div></section>
-    <section className="section-shell market-product-section"><div className="market-section-heading"><h2>Derniers produits</h2><Link to="/catalog">Voir tout <ArrowRight size={17}/></Link></div>{products.length ? <div className="product-grid">{products.slice(0, 12).map((product, index) => <ProductCard key={product.id} product={product} priority={index < 4}/>)}</div> : <div className="market-empty-products"><h3>Aucun produit disponible</h3><p>Revenez bientôt pour découvrir les produits des boutiques One Market.</p></div>}</section>
+    <section className="section-shell market-product-section"><div className="market-section-heading"><h2>Produits à découvrir</h2><Link to="/catalog">Voir tout <ArrowRight size={17}/></Link></div>{discoveryProducts.length ? <div className="product-grid">{discoveryProducts.map((product, index) => <ProductCard key={product.id} product={product} priority={index < 4}/>)}</div> : <div className="market-empty-products"><h3>Aucun produit disponible</h3><p>Revenez bientôt pour découvrir les produits des boutiques One Market.</p></div>}</section>
     {stores.length > 0 && <section className="section-shell market-store-section"><div className="market-section-heading"><h2>Boutiques à découvrir</h2><Link to="/stores">Toutes les boutiques <ArrowRight size={17}/></Link></div><div className="store-grid">{stores.slice(0, 6).map(store => <Link to={`/store/${store.slug}`} className="store-card" key={store.id}><SmartImage src={store.logo_url} alt={store.name} className="home-store-logo" fit="contain" width={100} sizes="54px"/><div><span className="home-store-name"><strong>{store.name}</strong><StoreTrustBadge store={store} compact/></span><span>RDC{store.city ? ` · ${store.city}` : ''}</span></div><ChevronRight size={20}/></Link>)}</div></section>}
   </main>
 }
