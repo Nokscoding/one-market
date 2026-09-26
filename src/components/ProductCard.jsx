@@ -8,7 +8,7 @@ import RatingStars from './RatingStars'
 import SmartImage from './SmartImage'
 import StoreTrustBadge from './StoreTrustBadge'
 
-export default function ProductCard({ product, priority = false }) {
+export default function ProductCard({ product, priority = false, onOpen }) {
   const [quickView, setQuickView] = useState(false)
   const image = product.image || product.product_images?.[0]?.secure_url
   const store = product.store || product.stores
@@ -24,11 +24,13 @@ export default function ProductCard({ product, priority = false }) {
   const showStock = !product.has_variants
   const sponsored = Boolean(product.sponsored)
 
+  const notifyOpen = () => { if (typeof onOpen === 'function') onOpen(product) }
+
   return (
     <>
       <article className="product-card market-product-card">
         <div className="product-media-wrap">
-          <Link to={`/product/${product.id}`} className="product-media" aria-label={`Voir ${product.name}`}>
+          <Link to={`/product/${product.id}`} className="product-media" aria-label={`Voir ${product.name}`} onClick={notifyOpen}>
             <SmartImage
               src={image}
               alt={product.name}
@@ -42,13 +44,13 @@ export default function ProductCard({ product, priority = false }) {
           </Link>
           <div className="product-badges">{sponsored && <span className="product-badge product-badge--sponsored">Sponsorisé</span>}{discount > 0 && <span className="product-badge product-badge--promo">-{discount}%</span>}{isNew && <span className="product-badge product-badge--new">Nouveau</span>}{isPopular && <span className="product-badge product-badge--popular">Populaire</span>}</div>
           <FavoriteButton productId={product.id} className="favorite-button--card"/>
-          <button className="product-quick-button" onClick={() => setQuickView(true)} aria-label={`Aperçu rapide de ${product.name}`}><Eye size={17}/><span>Aperçu</span></button>
+          <button className="product-quick-button" onClick={() => { notifyOpen(); setQuickView(true) }} aria-label={`Aperçu rapide de ${product.name}`}><Eye size={17}/><span>Aperçu</span></button>
         </div>
 
         <div className="product-info">
           {store && <div className="product-store-line"><span className="product-store-name"><Link to={`/store/${store.slug}`} className="product-store">{store.name}</Link><StoreTrustBadge store={store} compact/></span><span>RDC</span></div>}
-          <Link to={`/product/${product.id}`} className="product-name">{product.name}</Link>
-          <div className="product-rating-row"><RatingStars value={rating} count={reviewCount} compact/><Link className="product-review-link" to={`/product/${product.id}#reviews`}>{reviewCount ? 'Voir les avis' : 'Laisser un avis'}</Link></div>
+          <Link to={`/product/${product.id}`} className="product-name" onClick={notifyOpen}>{product.name}</Link>
+          <div className="product-rating-row"><RatingStars value={rating} count={reviewCount} compact/><Link className="product-review-link" to={`/product/${product.id}#reviews`} onClick={notifyOpen}>{reviewCount ? 'Voir les avis' : 'Laisser un avis'}</Link></div>
           <div className="product-price-line"><strong className="product-price">{money(product.price, product.currency)}</strong>{discount > 0 && <span className="product-old-price">{money(product.old_price, product.currency)}</span>}</div>
           <div className="product-stock-line">
             {showStock ? <span className={`product-stock ${stock <= 0 ? 'is-out' : stock <= 5 ? 'is-low' : ''}`}>{stock <= 0 ? 'Rupture de stock' : stock <= 5 ? `Plus que ${stock}` : 'En stock'}</span> : <span className="product-stock">Options disponibles</span>}
