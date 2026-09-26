@@ -54,7 +54,7 @@ export default function ChatPage() {
       if (currentSuborder) {
         const [storeResult, itemResult] = await Promise.all([
           supabase.from('stores').select('id,name,slug,logo_url,is_verified,is_partner').eq('id', currentSuborder.store_id).maybeSingle(),
-          supabase.from('order_items').select('id,order_item_number,product_id,product_name,product_image_url,line_total,order_id,seller_order_id,store_id').eq('seller_order_id', currentSuborder.id),
+          supabase.from('order_items').select('id,product_id,product_name,product_image_url,line_total,order_id,seller_order_id,store_id').eq('seller_order_id', currentSuborder.id),
         ])
         if (storeResult.error) throw storeResult.error
         if (itemResult.error) throw itemResult.error
