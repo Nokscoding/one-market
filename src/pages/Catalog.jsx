@@ -19,7 +19,7 @@ export default function Catalog() {
   const q = params.get('q') || ''
   const category = params.get('category') || ''
   const view = params.get('view') || ''
-  const sort = params.get('sort') || 'newest'
+  const sort = params.get('sort') || 'relevance'
 
   useEffect(() => {
     let active = true
@@ -59,13 +59,14 @@ export default function Catalog() {
       if (categoryAds.error) throw categoryAds.error
       if (!active) return
 
-      let list = result.data || []
-      if (view === 'new') list = list.slice(0, 12)
-
-      if (sort === 'rating') list.sort((a, b) => (Number(b.rating_avg) || 0) - (Number(a.rating_avg) || 0) || (Number(b.rating_count) || 0) - (Number(a.rating_count) || 0))
+      let list = [...(result.data || [])]
+      if (view === 'new') {
+        list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        list = list.slice(0, 12)
+      } else if (sort === 'rating') list.sort((a, b) => (Number(b.rating_avg) || 0) - (Number(a.rating_avg) || 0) || (Number(b.rating_count) || 0) - (Number(a.rating_count) || 0))
       else if (sort === 'price_asc') list.sort((a, b) => Number(a.price) - Number(b.price))
       else if (sort === 'price_desc') list.sort((a, b) => Number(b.price) - Number(a.price))
-      else list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      else if (sort === 'newest') list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
       const paidProductIds = new Set((productAds.data || []).map(ad => ad.product_id).filter(Boolean))
       const categoryStoreIds = new Set((categoryAds.data || []).filter(ad => category && ad.category_id === category).map(ad => ad.store_id))
@@ -89,6 +90,26 @@ export default function Catalog() {
 
     return () => { active = false }
   }, [q, category, view, sort, retryKey])
+
+  function recordSearchInterest(product) {
+    const query = q.trim().slice(0, 120)
+    if (!query || !product?.id) return
+
+    const storageKey = `om-search-hit:${product.id}:${query.toLowerCase()}`
+    try {
+      if (window.sessionStorage.getItem(storageKey)) return
+      window.sessionStorage.setItem(storageKey, '1')
+    } catch {}
+
+    supabase.from('product_search_events').insert({ product_id: product.id, search_query: query }).then(({ error: trackingError }) => {
+      if (!trackingError) return
+      logTechnicalError('catalog-search-interest', trackingError)
+      try { window.sessionStorage.removeItem(storageKey) } catch {}
+    }).catch(trackingError => {
+      logTechnicalError('catalog-search-interest', trackingError)
+      try { window.sessionStorage.removeItem(storageKey) } catch {}
+    })
+  }
 
   const selectedCategory = categories.find(c => c.id === category)
   const title = useMemo(() => {
@@ -128,9 +149,9 @@ export default function Catalog() {
         <select value={category} onChange={e => setFilter('category', e.target.value)}><option value="">Toutes les catégories</option>{categories.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}</select>
         {view === 'new' && <button className="text-button" onClick={() => setFilter('view', '')}>Voir tous les produits</button>}
         {q && <button className="text-button" onClick={() => setFilter('q', '')}><Search size={16}/> Effacer la recherche</button>}
-        <div className="catalog-sort"><label htmlFor="catalog-sort">Trier par</label><select id="catalog-sort" value={sort} onChange={e => setFilter('sort', e.target.value)}><option value="newest">Plus récents</option><option value="rating">Mieux notés</option><option value="price_asc">Prix croissant</option><option value="price_desc">Prix décroissant</option></select></div>
+        <div className="catalog-sort"><label htmlFor="catalog-sort">Trier par</label><select id="catalog-sort" value={sort} onChange={e => setFilter('sort', e.target.value)}><option value="relevance">Pertinence</option><option value="newest">Plus récents</option><option value="rating">Mieux notés</option><option value="price_asc">Prix croissant</option><option value="price_desc">Prix décroissant</option></select></div>
       </div>
-      {products.length ? <div className="product-grid">{products.map((p, productIndex) => <ProductCard key={p.id} product={p} priority={productIndex < 4}/>)}</div> : <EmptyState title="Aucun produit trouvé" text={q ? 'Essayez un autre nom de produit, une boutique ou une catégorie.' : 'Essayez une autre catégorie ou retirez certains filtres.'}/>} 
+      {products.length ? <div className="product-grid">{products.map((p, productIndex) => <ProductCard key={p.id} product={p} priority={productIndex < 4} onOpen={q.trim() ? recordSearchInterest : undefined}/>)}</div> : <EmptyState title="Aucun produit trouvé" text={q ? 'Essayez un autre nom de produit, une boutique ou une catégorie.' : 'Essayez une autre catégorie ou retirez certains filtres.'}/>} 
     </main>
   )
 }
