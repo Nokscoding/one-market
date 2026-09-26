@@ -13,6 +13,7 @@ import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import { cdf, DELIVERY_OPTIONS } from '../lib/delivery'
 import { money } from '../lib/format'
+import { recordProductView } from '../lib/productInterest'
 import { supabase } from '../lib/supabase'
 import { logTechnicalError, userError } from '../lib/userErrors'
 
@@ -69,6 +70,10 @@ export default function ProductPage() {
     })
     return () => { active = false }
   }, [id])
+
+  useEffect(() => {
+    if (!loading && product?.id && user?.id) recordProductView(product, user.id)
+  }, [loading, product?.id, user?.id])
 
   useEffect(() => {
     if (loading || location.hash !== '#reviews') return
