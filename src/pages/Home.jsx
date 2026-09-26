@@ -53,7 +53,7 @@ function safePromoHref(value) {
 }
 
 function promotionIsLive(item) {
-  if (!item || item.active === false || !String(item.url || '').trim()) return false
+  if (!item || item.active === false || !String(item.desktop_url || item.url || '').trim()) return false
   const now = Date.now()
   if (item.start_at) {
     const start = new Date(item.start_at).getTime()
@@ -66,6 +66,15 @@ function promotionIsLive(item) {
   return true
 }
 
+function promotionMediaForViewport(item, mobile) {
+  const desktopUrl = String(item?.desktop_url || item?.url || '').trim()
+  const mobileUrl = String(item?.mobile_url || '').trim()
+  const desktopType = item?.desktop_media_type === 'video' || item?.media_type === 'video' ? 'video' : 'image'
+  const mobileType = item?.mobile_media_type === 'video' ? 'video' : (item?.mobile_media_type === 'image' ? 'image' : desktopType)
+  if (mobile && mobileUrl) return { url: mobileUrl, type: mobileType }
+  return { url: desktopUrl, type: desktopType }
+}
+
 function HomePromoCarousel({ config }) {
   const slides = useMemo(() => {
     if (!config || config.enabled === false || !Array.isArray(config.items)) return []
@@ -73,6 +82,7 @@ function HomePromoCarousel({ config }) {
   }, [config])
   const [index, setIndex] = useState(0)
   const [paused, setPaused] = useState(false)
+  const [mobileViewport, setMobileViewport] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 820px)').matches)
   const touchStart = useRef(null)
   const promoHeightDesktop = Math.max(180, Math.min(640, Number(config?.desktop_height) || 320))
   const promoHeightMobile = Math.max(140, Math.min(520, Number(config?.mobile_height) || 240))
@@ -80,6 +90,14 @@ function HomePromoCarousel({ config }) {
   const promoStyle = { '--promo-height-desktop': `${promoHeightDesktop}px`, '--promo-height-mobile': `${promoHeightMobile}px`, '--promo-fit': promoFit }
 
   useEffect(() => { if (index >= slides.length) setIndex(0) }, [index, slides.length])
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    const query = window.matchMedia('(max-width: 820px)')
+    const update = event => setMobileViewport(event.matches)
+    setMobileViewport(query.matches)
+    query.addEventListener?.('change', update)
+    return () => query.removeEventListener?.('change', update)
+  }, [])
   useEffect(() => {
     if (paused || slides.length < 2) return undefined
     const seconds = Math.max(3, Math.min(15, Number(config?.autoplay_seconds) || 6))
@@ -94,7 +112,8 @@ function HomePromoCarousel({ config }) {
     <div className="home-promo-stage">
       <div className="home-promo-track" style={{ transform: `translate3d(-${index * 100}%,0,0)` }}>
         {slides.map((slide, slideIndex) => {
-          const type = slide.media_type === 'video' ? 'video' : 'image'
+          const media = promotionMediaForViewport(slide, mobileViewport)
+          const type = media.type
           const desktopX = Math.max(0, Math.min(100, Number(slide.crop_desktop_x ?? slide.crop_x ?? 50)))
           const desktopY = Math.max(0, Math.min(100, Number(slide.crop_desktop_y ?? slide.crop_y ?? 50)))
           const desktopZoom = Math.max(100, Math.min(300, Number(slide.crop_desktop_zoom ?? slide.crop_zoom ?? 100)))
@@ -111,11 +130,11 @@ function HomePromoCarousel({ config }) {
           }
           const href = safePromoHref(slide.link)
           const external = href && !href.startsWith('/')
-          const media = type === 'video'
-            ? <video src={slide.url} autoPlay={slideIndex === index} muted loop playsInline preload={slideIndex === index ? 'metadata' : 'none'} aria-label={slide.alt || slide.title || 'Promotion One Market'}/>
-            : <SmartImage src={slide.url} alt={slide.alt || slide.title || 'Promotion One Market'} fit={promoFit} width={1600} sizes="100vw" loading={slideIndex === 0 ? 'eager' : 'lazy'} fetchPriority={slideIndex === 0 ? 'high' : undefined}/>
-          const body = <>{media}{slide.title ? <span className="home-promo-caption">{slide.title}</span> : null}</>
-          return <article className="home-promo-slide" style={cropStyle} key={slide.id || `${slide.url}-${slideIndex}`} aria-hidden={slideIndex !== index}>{href ? <a href={href} target={external && slide.target_blank !== false ? '_blank' : undefined} rel={external && slide.target_blank !== false ? 'noreferrer' : undefined}>{body}</a> : <div className="home-promo-media">{body}</div>}</article>
+          const mediaNode = type === 'video'
+            ? <video src={media.url} autoPlay={slideIndex === index} muted loop playsInline preload={slideIndex === index ? 'metadata' : 'none'} aria-label={slide.alt || slide.title || 'Promotion One Market'}/>
+            : <SmartImage src={media.url} alt={slide.alt || slide.title || 'Promotion One Market'} fit={promoFit} width={1600} sizes="100vw" loading={slideIndex === 0 ? 'eager' : 'lazy'} fetchPriority={slideIndex === 0 ? 'high' : undefined}/>
+          const body = <>{mediaNode}{slide.title ? <span className="home-promo-caption">{slide.title}</span> : null}</>
+          return <article className="home-promo-slide" style={cropStyle} key={slide.id || `${slide.desktop_url || slide.url}-${slideIndex}`} aria-hidden={slideIndex !== index}>{href ? <a href={href} target={external && slide.target_blank !== false ? '_blank' : undefined} rel={external && slide.target_blank !== false ? 'noreferrer' : undefined}>{body}</a> : <div className="home-promo-media">{body}</div>}</article>
         })}
       </div>
       {slides.length > 1 && <><button className="home-promo-nav prev" type="button" onClick={() => go(-1)} aria-label="Publicité précédente"><ChevronLeft size={22}/></button><button className="home-promo-nav next" type="button" onClick={() => go(1)} aria-label="Publicité suivante"><ChevronRight size={22}/></button></>}
@@ -193,11 +212,15 @@ export default function Home() {
     const paid = sponsoredBanners.map((ad,index) => ({
       id:`paid-${ad.id}`,
       url:ad.media_url,
+      desktop_url:ad.media_url,
+      mobile_url:'',
       link:ad.destination_url || (ad.store_slug ? `/store/${ad.store_slug}` : ''),
       title:`Sponsorisé · ${ad.title || ad.store_name || 'One Market Ads'}`,
       alt:ad.title || ad.store_name || 'Publicité sponsorisée',
       active:true,
       media_type:'image',
+      desktop_media_type:'image',
+      mobile_media_type:'image',
       sort_order:index - 1000,
       target_blank:false,
       crop_x:50,crop_y:50,crop_zoom:100,
