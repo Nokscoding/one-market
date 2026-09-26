@@ -1,0 +1,18 @@
+{
+  "name": "One Market",
+  "short_name": "OneMarket",
+  "description": "Tous vos achats au même endroit",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#08182c",
+  "theme_color": "#08182c",
+  "icons": [
+    {
+      "src": "https://res.cloudinary.com/nks-services/image/upload/v1788106209/one-market-logo.webp",
+      "sizes": "any",
+      "type": "image/webp",
+      "purpose": "any maskable"
+    }
+  ]
+}
