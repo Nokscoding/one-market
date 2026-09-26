@@ -95,10 +95,20 @@ function HomePromoCarousel({ config }) {
       <div className="home-promo-track" style={{ transform: `translate3d(-${index * 100}%,0,0)` }}>
         {slides.map((slide, slideIndex) => {
           const type = slide.media_type === 'video' ? 'video' : 'image'
-          const cropX = Math.max(0, Math.min(100, Number(slide.crop_x ?? 50)))
-          const cropY = Math.max(0, Math.min(100, Number(slide.crop_y ?? 50)))
-          const cropZoom = Math.max(100, Math.min(220, Number(slide.crop_zoom ?? 100)))
-          const cropStyle = { '--promo-position-x': `${cropX}%`, '--promo-position-y': `${cropY}%`, '--promo-zoom': cropZoom / 100 }
+          const desktopX = Math.max(0, Math.min(100, Number(slide.crop_desktop_x ?? slide.crop_x ?? 50)))
+          const desktopY = Math.max(0, Math.min(100, Number(slide.crop_desktop_y ?? slide.crop_y ?? 50)))
+          const desktopZoom = Math.max(100, Math.min(300, Number(slide.crop_desktop_zoom ?? slide.crop_zoom ?? 100)))
+          const mobileX = Math.max(0, Math.min(100, Number(slide.crop_mobile_x ?? slide.crop_x ?? 50)))
+          const mobileY = Math.max(0, Math.min(100, Number(slide.crop_mobile_y ?? slide.crop_y ?? 50)))
+          const mobileZoom = Math.max(100, Math.min(300, Number(slide.crop_mobile_zoom ?? slide.crop_zoom ?? 100)))
+          const cropStyle = {
+            '--promo-position-x-desktop': `${desktopX}%`,
+            '--promo-position-y-desktop': `${desktopY}%`,
+            '--promo-zoom-desktop': desktopZoom / 100,
+            '--promo-position-x-mobile': `${mobileX}%`,
+            '--promo-position-y-mobile': `${mobileY}%`,
+            '--promo-zoom-mobile': mobileZoom / 100,
+          }
           const href = safePromoHref(slide.link)
           const external = href && !href.startsWith('/')
           const media = type === 'video'
@@ -191,6 +201,8 @@ export default function Home() {
       sort_order:index - 1000,
       target_blank:false,
       crop_x:50,crop_y:50,crop_zoom:100,
+      crop_desktop_x:50,crop_desktop_y:50,crop_desktop_zoom:100,
+      crop_mobile_x:50,crop_mobile_y:50,crop_mobile_zoom:100,
     }))
     return { ...(promotions || {}), enabled: paid.length ? true : promotions?.enabled, items:[...paid,...(Array.isArray(promotions?.items) ? promotions.items : [])] }
   },[promotions,sponsoredBanners])
