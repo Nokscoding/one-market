@@ -34,8 +34,8 @@ export default function ProductCard({ product, priority = false, onOpen }) {
             <SmartImage
               src={image}
               alt={product.name}
-              className="product-card-smart-image"
-              fit="contain"
+              className="product-card-smart-image product-card-smart-image--cover"
+              fit="cover"
               width={420}
               sizes="(max-width: 560px) 46vw, (max-width: 900px) 31vw, (max-width: 1280px) 23vw, 300px"
               loading={priority ? 'eager' : 'lazy'}
