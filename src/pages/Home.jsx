@@ -120,7 +120,7 @@ export default function Home() {
     ;(async () => {
       try {
         const [pRes, sRes, cRes] = await Promise.all([
-          supabase.from('products').select('id,store_id,category_id,name,slug,price,old_price,currency,stock_qty,has_variants,is_active,rating_avg,rating_count,created_at').eq('is_active', true).order('created_at', { ascending: false }).limit(30),
+          supabase.rpc('market_catalog_products', { p_query: null, p_category: null, p_limit: 30, p_offset: 0 }),
           supabase.from('stores').select('id,name,slug,country_code,status,city,logo_url,is_verified,is_partner,created_at').eq('status', 'active').eq('country_code', 'CD').order('created_at', { ascending: false }).limit(8),
           supabase.from('categories').select('id,name,image_url,sort_order,is_active').eq('is_active', true).order('sort_order').limit(8),
         ])
@@ -128,21 +128,7 @@ export default function Home() {
         if (sRes.error) throw sRes.error
         if (cRes.error) throw cRes.error
         if (!active) return
-        const baseProducts = pRes.data || []
-        const ids = baseProducts.map(p => p.id)
-        const storeIds = [...new Set(baseProducts.map(p => p.store_id))]
-        const [imagesResult, storeResult] = await Promise.all([
-          ids.length ? supabase.from('product_images').select('product_id,secure_url,sort_order').in('product_id', ids).order('sort_order') : Promise.resolve({ data: [], error: null }),
-          storeIds.length ? supabase.from('stores').select('id,name,slug,country_code,status,is_verified,is_partner').in('id', storeIds) : Promise.resolve({ data: [], error: null }),
-        ])
-        if (imagesResult.error) throw imagesResult.error
-        if (storeResult.error) throw storeResult.error
-        if (!active) return
-        const firstImage = {}
-        ;(imagesResult.data || []).forEach(img => { if (!firstImage[img.product_id] && img.secure_url) firstImage[img.product_id] = img.secure_url })
-        const storeMap = Object.fromEntries((storeResult.data || []).map(store => [store.id, store]))
-        const rdcProducts = baseProducts.map(product => ({ ...product, image: firstImage[product.id] || null, store: storeMap[product.store_id] })).filter(product => product.store?.country_code === 'CD' && product.store?.status === 'active')
-        setProducts(rdcProducts)
+        setProducts(pRes.data || [])
         setStores(sRes.data || [])
         setCategories(cRes.data || [])
       } catch (loadError) {
