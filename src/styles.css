@@ -984,3 +984,27 @@
     gap:12px 8px!important;
   }
 }
+
+
+/* Product card thumbnails always fill the card media frame.
+   Detail/quick-view images keep their own fit behavior. */
+.market-product-card .product-media{
+  overflow:hidden!important;
+  background:#f3f5f8!important;
+}
+.market-product-card .product-card-smart-image--cover{
+  width:100%!important;
+  height:100%!important;
+  display:block!important;
+  overflow:hidden!important;
+  background:#f3f5f8!important;
+}
+.market-product-card .product-card-smart-image--cover img{
+  width:100%!important;
+  height:100%!important;
+  object-fit:cover!important;
+  object-position:center center!important;
+  padding:0!important;
+  margin:0!important;
+  box-sizing:border-box!important;
+}
