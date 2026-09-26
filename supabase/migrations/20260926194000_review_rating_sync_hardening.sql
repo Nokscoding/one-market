@@ -111,3 +111,10 @@ set rating_avg=coalesce((
       from public.product_reviews r
       where r.product_id=p.id and r.status='published'
     );
+
+
+-- Internal maintenance/trigger functions must not be callable as public RPCs.
+revoke all on function public.refresh_product_rating(uuid) from public, anon, authenticated;
+revoke all on function public.sync_product_rating_from_review() from public, anon, authenticated;
+revoke all on function public.set_review_verified_purchase() from public, anon, authenticated;
+revoke all on function public.touch_product_review_updated_at() from public, anon, authenticated;
