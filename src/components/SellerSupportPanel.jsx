@@ -29,8 +29,9 @@ function statusLabel(value) {
 export default function SellerSupportPanel({ store }) {
   const { user, profile } = useAuth()
   const [params, setParams] = useSearchParams()
+  const requestedTicket = params.get('ticket') || ''
   const [tickets, setTickets] = useState([])
-  const [activeId, setActiveId] = useState(params.get('ticket') || '')
+  const [activeId, setActiveId] = useState(requestedTicket)
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [threadLoading, setThreadLoading] = useState(false)
@@ -54,9 +55,8 @@ export default function SellerSupportPanel({ store }) {
       if (result.error) throw result.error
       const rows = (result.data || []).filter(ticket => !store?.id || !ticket.store_id || ticket.store_id === store.id)
       setTickets(rows)
-      const requested = params.get('ticket')
       setActiveId(current => {
-        if (requested && rows.some(ticket => ticket.id === requested)) return requested
+        if (requestedTicket && rows.some(ticket => ticket.id === requestedTicket)) return requestedTicket
         if (current && rows.some(ticket => ticket.id === current)) return current
         return rows[0]?.id || ''
       })
@@ -66,7 +66,7 @@ export default function SellerSupportPanel({ store }) {
     } finally {
       setLoading(false)
     }
-  }, [user?.id, store?.id, params])
+  }, [user?.id, store?.id, requestedTicket])
 
   useEffect(() => { loadTickets() }, [loadTickets])
 
