@@ -155,3 +155,300 @@
 }
 
 .notification-permission-message{grid-column:1/-1;padding:9px 11px;border-radius:10px;background:#fff7e6;color:#805b13;font-size:.72rem;line-height:1.4;border:1px solid #f0d79f}
+
+
+/* ==========================================================
+   One Market — retail homepage + mobile order hardening
+   Final override layer for the public marketplace.
+   ========================================================== */
+
+.order-card.order-card--final{
+  display:grid!important;
+  grid-template-columns:minmax(220px,1.25fr) minmax(150px,.55fr) minmax(210px,.8fr) auto!important;
+  align-items:center!important;
+  gap:14px!important;
+  padding:16px!important;
+  border:1px solid #dfe4eb!important;
+  border-radius:15px!important;
+  background:#fff!important;
+  color:inherit!important;
+  text-decoration:none!important;
+  box-shadow:0 7px 22px rgba(11,27,59,.04)!important;
+  min-width:0!important;
+}
+.order-card.order-card--final:hover{
+  border-color:#c9d5e5!important;
+  box-shadow:0 10px 28px rgba(11,27,59,.07)!important;
+}
+.order-card--final .order-card-primary{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:3px!important;
+  min-width:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.order-card--final .order-card-primary .order-number{
+  overflow-wrap:anywhere;
+  line-height:1.28;
+}
+.order-card--final .order-card-primary h3{
+  margin:1px 0 3px!important;
+  line-height:1.2;
+}
+.order-card--final .order-card-primary p{
+  margin:0!important;
+}
+.order-card--final .order-card-delivery,
+.order-card--final .order-card-payment{
+  min-width:0;
+}
+.order-card--final .order-card-payment{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+}
+.order-card--final .order-card-payment>svg{
+  flex:0 0 auto;
+  margin-top:1px;
+}
+.order-card--final .order-card-payment>span{
+  display:grid;
+  gap:2px;
+  min-width:0;
+}
+.order-card--final .order-card-payment strong,
+.order-card--final .order-card-payment small{
+  line-height:1.3;
+}
+.order-card--final .order-card-meta{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  gap:11px!important;
+  min-width:max-content;
+}
+
+@media(max-width:1100px){
+  .order-card.order-card--final{
+    grid-template-columns:minmax(0,1fr) minmax(180px,.75fr)!important;
+  }
+  .order-card--final .order-card-meta{
+    justify-content:flex-start!important;
+    min-width:0;
+  }
+}
+
+@media(max-width:820px){
+  /* Header search must breathe on phone. */
+  .mobile-market-search input{
+    min-width:0!important;
+    font-size:14px!important;
+    padding-right:8px!important;
+  }
+
+  /* One full retail hero, no 88vw card squeezed beside another card. */
+  .market-hero{
+    width:100%!important;
+    display:block!important;
+    overflow:visible!important;
+    padding:10px 12px 12px!important;
+  }
+  .market-hero-copy,
+  .market-hero-products{
+    width:100%!important;
+    max-width:none!important;
+    flex:none!important;
+    min-width:0!important;
+    scroll-snap-align:none!important;
+  }
+  .market-hero-copy{
+    min-height:0!important;
+    padding:24px 20px!important;
+  }
+  .market-hero-copy h1{
+    max-width:340px!important;
+    font-size:clamp(29px,8.6vw,36px)!important;
+  }
+  .market-hero-products{
+    margin-top:10px!important;
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-template-rows:auto!important;
+    gap:9px!important;
+    padding:11px!important;
+  }
+  .market-hero-products .mini-product-image{
+    height:clamp(112px,31vw,145px)!important;
+  }
+
+  /* Discovery is vertical on phones, like a real marketplace home feed. */
+  .marketplace-panels{
+    width:100%!important;
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    overflow:visible!important;
+    scroll-snap-type:none!important;
+    gap:12px!important;
+    padding:12px 10px 0!important;
+    margin-top:0!important;
+  }
+  .market-panel{
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    min-height:0!important;
+    height:auto!important;
+    flex:none!important;
+    display:grid!important;
+    grid-template-rows:auto auto auto!important;
+    align-content:start!important;
+    scroll-snap-align:none!important;
+    padding:15px!important;
+    border-radius:14px!important;
+  }
+  .market-panel-title{
+    margin-bottom:11px!important;
+  }
+  .market-panel-title h2{
+    font-size:21px!important;
+  }
+  .market-mini-grid{
+    flex:none!important;
+    align-content:start!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:9px!important;
+  }
+  .mini-product-image,
+  .panel-category>div{
+    height:clamp(118px,34vw,155px)!important;
+  }
+  .panel-empty{
+    min-height:112px!important;
+    padding:16px!important;
+    border-radius:10px;
+  }
+  .panel-link{
+    margin-top:12px!important;
+    align-self:start!important;
+  }
+
+  /* Benefits and product sections use the viewport width instead of nested rails. */
+  .marketplace-strip{
+    width:calc(100% - 20px)!important;
+    margin:10px auto 0!important;
+    padding:0!important;
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    overflow:visible!important;
+    gap:0!important;
+    border:1px solid #e0e3e8!important;
+    border-radius:14px!important;
+    background:#fff!important;
+  }
+  .marketplace-strip>div{
+    width:100%!important;
+    min-height:64px!important;
+    flex:none!important;
+    border:0!important;
+    border-bottom:1px solid #edf0f3!important;
+    border-radius:0!important;
+    padding:11px 14px!important;
+  }
+  .marketplace-strip>div:last-child{
+    border-bottom:0!important;
+  }
+  .market-product-section,
+  .market-store-section{
+    width:100%!important;
+    margin-top:10px!important;
+    padding:16px 12px 18px!important;
+    border-radius:0!important;
+  }
+  .product-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:18px 10px!important;
+  }
+  .store-grid{
+    grid-template-columns:1fr!important;
+  }
+
+  /* Order list: no nested card, no text collision. */
+  .orders-final-page{
+    width:100%!important;
+    padding-left:14px!important;
+    padding-right:14px!important;
+  }
+  .order-card.order-card--final{
+    grid-template-columns:1fr!important;
+    align-items:stretch!important;
+    gap:11px!important;
+    padding:14px!important;
+  }
+  .order-card--final .order-card-primary{
+    gap:2px!important;
+  }
+  .order-card--final .order-card-primary .order-number{
+    font-size:.78rem!important;
+  }
+  .order-card--final .order-card-primary h3{
+    font-size:1rem!important;
+  }
+  .order-card--final .order-card-delivery,
+  .order-card--final .order-card-payment{
+    width:100%!important;
+    padding:10px 11px!important;
+    border-radius:10px!important;
+    background:#f6f8fb!important;
+  }
+  .order-card--final .order-card-meta{
+    width:100%!important;
+    min-width:0!important;
+    display:grid!important;
+    grid-template-columns:1fr auto auto!important;
+    justify-content:stretch!important;
+    gap:10px!important;
+    padding-top:2px;
+  }
+  .order-card--final .order-card-meta strong{
+    white-space:nowrap;
+  }
+
+  /* Chat product chips stay readable instead of collapsing. */
+  .chat-items{
+    gap:9px!important;
+    padding:10px 12px!important;
+  }
+  .chat-items button{
+    min-width:min(82vw,320px)!important;
+    grid-template-columns:46px minmax(0,1fr)!important;
+    padding:9px!important;
+  }
+  .chat-items img,
+  .chat-item-placeholder{
+    width:46px!important;
+    height:46px!important;
+  }
+}
+
+@media(max-width:430px){
+  .market-hero-products .mini-product-image{
+    height:116px!important;
+  }
+  .mini-product-image,
+  .panel-category>div{
+    height:124px!important;
+  }
+  .market-panel{
+    padding:13px!important;
+  }
+  .order-card--final .order-card-meta{
+    grid-template-columns:1fr auto!important;
+  }
+  .order-card--final .order-card-meta svg{
+    display:none;
+  }
+}
