@@ -25,6 +25,19 @@ function whatsappDigits(value) {
   return digits
 }
 
+function promoErrorMessage(error) {
+  const message = String(error?.message || error || '')
+  if (message.includes('PROMO_NOT_FOUND')) return 'Ce code promo n’existe pas.'
+  if (message.includes('PROMO_INACTIVE')) return 'Ce code promo est désactivé.'
+  if (message.includes('PROMO_NOT_STARTED')) return 'Ce code promo n’est pas encore actif.'
+  if (message.includes('PROMO_EXPIRED')) return 'Ce code promo a expiré.'
+  if (message.includes('PROMO_MIN_ORDER')) return 'Le montant minimum requis pour ce code promo n’est pas atteint.'
+  if (message.includes('PROMO_USAGE_LIMIT')) return 'Ce code promo a atteint sa limite d’utilisation.'
+  if (message.includes('PROMO_USER_LIMIT')) return 'Vous avez déjà utilisé ce code promo le nombre maximum de fois autorisé.'
+  if (message.includes('PROMO_CURRENCY_UNSUPPORTED')) return 'Ce code promo ne peut pas être appliqué à cette commande.'
+  return ''
+}
+
 export default function CheckoutPage() {
   const { user, profile } = useAuth()
   const { items, total, deliveryMethod, deliveryFeeCdf, setDeliveryMethod, refreshCart } = useCart()
@@ -51,6 +64,10 @@ export default function CheckoutPage() {
   const [deliverySaving, setDeliverySaving] = useState(false)
   const [paymentSettings, setPaymentSettings] = useState(DEFAULT_PAYMENT_SETTINGS)
   const [paymentMethod, setPaymentMethod] = useState('cod')
+  const [promoCode, setPromoCode] = useState('')
+  const [promoQuote, setPromoQuote] = useState(null)
+  const [promoLoading, setPromoLoading] = useState(false)
+  const [promoError, setPromoError] = useState('')
 
   useEffect(() => { setSelectedDelivery(deliveryMethod || 'standard') }, [deliveryMethod])
   useEffect(() => { setForm(current => ({ ...current, full_name: current.full_name || profile?.full_name || '', phone: current.phone || profile?.phone || '' })) }, [profile?.full_name, profile?.phone])
@@ -135,6 +152,13 @@ export default function CheckoutPage() {
   const selectedAddress = addresses.find(address => address.id === selected) || null
   const mobileMoneyAvailable = paymentSettings.mobile_money_enabled === true && paymentSettings.mobile_money_coming_soon !== true
   const mobileMoneyNumber = paymentSettings.mobile_money_display || paymentSettings.mobile_money_whatsapp || '0995585991'
+  const promoDiscount = Number(promoQuote?.discount_total || 0)
+  const promoAdjustedTotal = Math.max(0, checkoutTotal - promoDiscount)
+
+  useEffect(() => {
+    setPromoQuote(null)
+    setPromoError('')
+  }, [checkoutTotal])
 
   function resetAddressForm() {
     setForm(blankAddress(profile || {}))
@@ -208,6 +232,27 @@ export default function CheckoutPage() {
     } finally { setDeliverySaving(false) }
   }
 
+  async function applyPromo() {
+    const code = promoCode.trim().toUpperCase()
+    setPromoError('')
+    setPromoQuote(null)
+    if (!code) return setPromoError('Entrez un code promo.')
+
+    setPromoLoading(true)
+    try {
+      const { data, error: quoteError } = await supabase.rpc('promo_quote', { p_code: code, p_items_total: checkoutTotal })
+      if (quoteError) throw quoteError
+      if (!data?.valid) throw new Error('PROMO_NOT_FOUND')
+      setPromoCode(data.code || code)
+      setPromoQuote(data)
+    } catch (quoteError) {
+      logTechnicalError('checkout-promo-quote', quoteError)
+      setPromoError(promoErrorMessage(quoteError) || 'Impossible de vérifier ce code promo pour le moment.')
+    } finally {
+      setPromoLoading(false)
+    }
+  }
+
   async function checkout() {
     if (!selected) return setError('Choisissez une adresse de livraison.')
     if (!checkoutItems.length) return setError('Votre panier ne contient aucun article à commander.')
@@ -219,10 +264,10 @@ export default function CheckoutPage() {
     setError('')
 
     try {
-      const common = { p_address_id: selected, p_customer_note: customerNote.trim() || null, p_delivery_method: selectedDelivery, p_payment_method: paymentMethod }
+      const common = { p_address_id: selected, p_customer_note: customerNote.trim() || null, p_delivery_method: selectedDelivery, p_payment_method: paymentMethod, p_promo_code: promoQuote?.code || null }
       const result = buyNowMode
-        ? await supabase.rpc('checkout_buy_now', { ...common, p_product_id: buyProductId, p_product_variant_id: buyVariantId || null, p_quantity: buyQuantity })
-        : await supabase.rpc('checkout_cart', common)
+        ? await supabase.rpc('checkout_buy_now_v2', { ...common, p_product_id: buyProductId, p_product_variant_id: buyVariantId || null, p_quantity: buyQuantity })
+        : await supabase.rpc('checkout_cart_v2', common)
       if (result.error) throw result.error
       if (!result.data) throw new Error('ORDER_NOT_FOUND')
 
@@ -232,7 +277,8 @@ export default function CheckoutPage() {
         const orderResult = await supabase.from('orders').select('order_number').eq('id', result.data).maybeSingle()
         const orderNumber = orderResult.data?.order_number || 'One Market'
         const digits = whatsappDigits(paymentSettings.mobile_money_whatsapp || mobileMoneyNumber)
-        const text = encodeURIComponent(`Bonjour One Market, je souhaite finaliser le paiement Mobile Money de ma commande ${orderNumber}. Total produits : ${money(checkoutTotal, 'USD')} + livraison ${cdf(displayedDeliveryFee)}.`)
+        const promoText = promoDiscount > 0 ? ` (code ${promoQuote?.code}, réduction ${money(promoDiscount, 'USD')})` : ''
+        const text = encodeURIComponent(`Bonjour One Market, je souhaite finaliser le paiement Mobile Money de ma commande ${orderNumber}. Produits à régler : ${money(promoAdjustedTotal, 'USD')}${promoText} + livraison ${cdf(displayedDeliveryFee)}.`)
         const whatsappUrl = `https://wa.me/${digits}?text=${text}`
         if (whatsappWindow && !whatsappWindow.closed) whatsappWindow.location.href = whatsappUrl
       }
@@ -241,7 +287,7 @@ export default function CheckoutPage() {
     } catch (checkoutError) {
       whatsappWindow?.close()
       logTechnicalError('checkout-submit', checkoutError)
-      setError(userError(checkoutError, 'checkout'))
+      setError(promoErrorMessage(checkoutError) || userError(checkoutError, 'checkout'))
     } finally {
       setSubmitting(false)
     }
@@ -315,7 +361,18 @@ export default function CheckoutPage() {
 
         <aside className="checkout-summary-card">
           <h2>Résumé</h2>
+          <div className="checkout-promo-box">
+            <label htmlFor="checkout-promo">Code promo</label>
+            <div className="checkout-promo-row">
+              <input id="checkout-promo" value={promoCode} maxLength={32} autoComplete="off" placeholder="Ex. BIENVENUE10" onChange={event => { setPromoCode(event.target.value.toUpperCase()); setPromoQuote(null); setPromoError('') }} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); applyPromo() } }}/>
+              <button className="button secondary" type="button" disabled={promoLoading || !promoCode.trim() || checkoutTotal <= 0} onClick={applyPromo}>{promoLoading ? 'Vérification…' : 'Appliquer'}</button>
+            </div>
+            {promoError && <small className="checkout-promo-error">{promoError}</small>}
+            {promoQuote && <small className="checkout-promo-success"><Check size={14}/> Code {promoQuote.code} appliqué</small>}
+          </div>
           <div><span>Produits ({checkoutCount})</span><strong>{money(checkoutTotal, 'USD')}</strong></div>
+          {promoDiscount > 0 && <div className="checkout-promo-discount"><span>Réduction {promoQuote?.code}</span><strong>-{money(promoDiscount, 'USD')}</strong></div>}
+          {promoDiscount > 0 && <div className="checkout-promo-total"><span>Sous-total après réduction</span><strong>{money(promoAdjustedTotal, 'USD')}</strong></div>}
           <div><span>Livraison</span><strong>{cdf(displayedDeliveryFee)}</strong></div>
           <p className="checkout-currency-note">Les produits sont facturés en USD et la livraison en CDF. Ces montants ne sont pas mélangés dans un total artificiel.</p>
           <button className="button primary full" type="button" disabled={submitting || !selected || !checkoutItems.length} onClick={checkout}>{submitting ? 'Enregistrement de la commande…' : 'Passer la commande'}</button>
