@@ -144,7 +144,7 @@ export default function Catalog() {
     return (
       <main className="section-shell page-space">
         <div className="page-title"><span className="eyebrow">Explorer</span><h1>Catégories</h1><p>Choisissez un univers pour découvrir les produits disponibles sur One Market.</p></div>
-        {categories.length ? <div className="category-row">{categories.map(c => <Link key={c.id} to={`/catalog?category=${c.id}`} className="category-card"><SmartImage src={c.image_url} alt={c.name} className="category-card-image" fit="contain" width={400} sizes="(max-width: 650px) 46vw, (max-width: 1000px) 31vw, 260px"/><span>{c.name}</span></Link>)}</div> : <EmptyState title="Aucune catégorie disponible"/>}
+        {categories.length ? <div className="category-row">{categories.map(c => <Link key={c.id} to={`/catalog?category=${c.id}`} className="category-card"><SmartImage src={c.image_url} alt={c.name} className="category-card-image" fit="contain" width={400} sizes="(max-width: 650px) 46vw, (max-width: 1000px) 31vw, 260px"/><span className="category-card-label">{c.name}</span></Link>)}</div> : <EmptyState title="Aucune catégorie disponible"/>}
       </main>
     )
   }
