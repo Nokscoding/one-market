@@ -29,11 +29,13 @@ export default function Stores() {
       if (active) {
         const sponsored = (adResult.data || []).map(ad => ad.store_id).filter(Boolean)
         const rank = new Map(sponsored.map((id,index) => [id,index]))
-        const list = [...(storeResult.data || [])].sort((a,b) => {
-          const ar = rank.has(a.id) ? rank.get(a.id) : 9999
-          const br = rank.has(b.id) ? rank.get(b.id) : 9999
-          return ar - br || a.name.localeCompare(b.name)
-        })
+        const list = [...(storeResult.data || [])]
+          .filter(store => !/^QA TEST/i.test(String(store.name || '')))
+          .sort((a,b) => {
+            const ar = rank.has(a.id) ? rank.get(a.id) : 9999
+            const br = rank.has(b.id) ? rank.get(b.id) : 9999
+            return ar - br || a.name.localeCompare(b.name)
+          })
         setSponsoredStoreIds(sponsored)
         setStores(list)
       }
