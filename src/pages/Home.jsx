@@ -6,7 +6,9 @@ import ProductCard from '../components/ProductCard'
 import SmartImage from '../components/SmartImage'
 import StoreTrustBadge from '../components/StoreTrustBadge'
 import { useAuth } from '../context/AuthContext'
+import { useMarketLocation } from '../context/MarketLocationContext'
 import { recordProductView } from '../lib/productInterest'
+import { rankProductsForLocation, rankStoresForLocation } from '../lib/marketLocation'
 import { supabase } from '../lib/supabase'
 import { logTechnicalError } from '../lib/userErrors'
 import '../styles/home-promotions.css'
@@ -145,6 +147,7 @@ function HomePromoCarousel({ config }) {
 
 export default function Home() {
   const { user } = useAuth()
+  const { location: marketLocation } = useMarketLocation()
   const [products, setProducts] = useState([])
   const [stores, setStores] = useState([])
   const [categories, setCategories] = useState([])
@@ -186,7 +189,7 @@ export default function Home() {
 
         const [pRes, sRes, cRes, aRes] = await Promise.all([
           productRequest,
-          supabase.from('stores').select('id,name,slug,country_code,status,city,logo_url,is_verified,is_partner,is_demo,created_at').eq('status', 'active').eq('country_code', 'CD').order('created_at', { ascending: false }).limit(20),
+          supabase.from('stores').select('id,name,slug,country_code,status,city,logo_url,is_verified,is_partner,is_demo,created_at').eq('status', 'active').eq('country_code', marketLocation.countryCode || 'CD').order('created_at', { ascending: false }).limit(40),
           supabase.from('categories').select('id,name,slug,image_url,sort_order,is_active').eq('is_active', true).order('sort_order').limit(20),
           affinityRequest,
         ])
@@ -195,8 +198,8 @@ export default function Home() {
         if (cRes.error) throw cRes.error
         if (aRes.error) throw aRes.error
         if (!active) return
-        setProducts(weightedMarketplaceShuffle(pRes.data || []))
-        setStores(shuffleMarketplaceItems((sRes.data || []).filter(store => !/^QA TEST/i.test(String(store.name || '')))))
+        setProducts(rankProductsForLocation(weightedMarketplaceShuffle(pRes.data || []), marketLocation))
+        setStores(rankStoresForLocation(shuffleMarketplaceItems((sRes.data || []).filter(store => !/^QA TEST/i.test(String(store.name || '')))), marketLocation))
         setCategories(cRes.data || [])
         setAffinity(aRes.data || [])
       } catch (loadError) {
@@ -206,7 +209,7 @@ export default function Home() {
       }
     })()
     return () => { active = false }
-  }, [user?.id])
+  }, [user?.id, marketLocation.countryCode, marketLocation.city])
 
   const promoConfig = useMemo(() => {
     const paid = sponsoredBanners.map((ad,index) => ({
@@ -239,11 +242,11 @@ export default function Home() {
 
   return <main className="market-home">
     <HomePromoCarousel config={promoConfig}/>
-    <section className="market-hero-wrap"><div className="market-hero section-shell"><div className="market-hero-copy"><span>One Market</span><h1>Tout votre shopping, au même endroit.</h1><p>Achetez auprès de plusieurs boutiques en RDC et suivez vos commandes depuis un seul compte.</p><Link to="/catalog">Voir les produits <ArrowRight size={18}/></Link></div></div></section>
+    <section className="market-hero-wrap"><div className="market-hero section-shell"><div className="market-hero-copy"><span>One Market</span><h1>Tout votre shopping, au même endroit.</h1><p>Découvrez d’abord les produits disponibles à {marketLocation.city || 'votre ville'}, puis ceux expédiés depuis d’autres villes.</p><Link to="/catalog">Voir les produits <ArrowRight size={18}/></Link></div></div></section>
     <section className="section-shell marketplace-panels" aria-label="Découvrir One Market">
       <article className="market-panel"><Link className="market-panel-title" to="/catalog?view=categories" aria-label="Voir toutes les catégories"><h2>Explorer les catégories</h2><ChevronRight size={24}/></Link><div className="market-mini-grid category-mini-grid">{categories.slice(0, 4).map(category => <Link key={category.id} to={`/catalog?category=${category.id}`} className="panel-category"><div><SmartImage src={category.image_url} alt={category.name} fit="contain" width={400} sizes="(max-width: 760px) 44vw, 260px"/></div><strong>{category.name}</strong></Link>)}</div><Link className="panel-link" to="/catalog?view=categories">Toutes les catégories</Link></article>
       <article className="market-panel"><Link className="market-panel-title" to="/catalog" aria-label="Voir les recommandations"><span><h2>Pour vous</h2>{topInterest ? <small>Inspiré de vos achats · {topInterest}</small> : null}</span><ChevronRight size={24}/></Link><div className="market-mini-grid">{featured.map(product => <MiniProduct key={product.id} product={product} onOpen={recordOpen}/>)}</div><Link className="panel-link" to="/catalog">Voir plus de produits</Link></article>
-      <article className="market-panel"><Link className="market-panel-title" to="/catalog" aria-label="Voir la sélection RDC"><h2>Shopping en RDC</h2><ChevronRight size={24}/></Link><div className="market-mini-grid">{localSelection.map(product => <MiniProduct key={product.id} product={product} onOpen={recordOpen}/>)}</div><Link className="panel-link" to="/catalog">Voir la sélection</Link></article>
+      <article className="market-panel"><Link className="market-panel-title" to="/catalog" aria-label="Voir la sélection RDC"><h2>{marketLocation.city ? `Près de vous · ${marketLocation.city}` : 'Shopping local'}</h2><ChevronRight size={24}/></Link><div className="market-mini-grid">{localSelection.map(product => <MiniProduct key={product.id} product={product} onOpen={recordOpen}/>)}</div><Link className="panel-link" to="/catalog">Voir la sélection</Link></article>
       <article className="market-panel"><Link className="market-panel-title" to="/catalog" aria-label="Commencer mes achats"><h2>Paiement à la livraison</h2><ChevronRight size={24}/></Link><div className="panel-empty">Commandez en ligne et réglez le livreur à la réception lorsque ce mode de paiement est choisi.</div><Link className="panel-link" to="/catalog">Commencer mes achats</Link></article>
     </section>
     <section className="section-shell marketplace-strip"><div><StoreIcon size={21}/><strong>Plusieurs boutiques</strong><span>Un seul marché pour vos achats.</span></div><div><Truck size={21}/><strong>Livraison en RDC</strong><span>Livraison normale ou express selon les disponibilités.</span></div><div><MessageCircle size={21}/><strong>Suivi simple</strong><span>Retrouvez vos commandes et messages depuis votre compte.</span></div></section>
