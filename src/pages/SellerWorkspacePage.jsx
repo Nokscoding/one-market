@@ -426,6 +426,51 @@ export default function SellerWorkspacePage() {
     }
   }
 
+  async function requestPayout(event) {
+    event.preventDefault()
+    if (!selectedStore?.id || payoutRequestBusy) return
+    const amount = Number(payoutRequestAmount)
+    const available = Number(payoutBalance?.available_to_request || 0)
+    if (!Number.isFinite(amount) || amount <= 0) return setFeedback('Indiquez un montant de versement valide.')
+    if (amount > available) return setFeedback('Le montant demandé dépasse le solde disponible.')
+
+    setPayoutRequestBusy(true)
+    setFeedback('')
+    const { error: requestError } = await supabase.rpc('seller_request_payout', {
+      p_store_id: selectedStore.id,
+      p_amount: Number(amount.toFixed(2)),
+      p_note: payoutRequestNote.trim() || null,
+    })
+    setPayoutRequestBusy(false)
+    if (requestError) {
+      logTechnicalError('seller-payout-request', requestError)
+      const raw = String(requestError.message || '')
+      return setFeedback(raw.includes('NO_AVAILABLE_PAYOUT_BALANCE')
+        ? 'Aucun solde n’est encore disponible au versement.'
+        : raw.includes('PAYOUT_REQUEST_AMOUNT_INVALID')
+          ? 'Ce montant dépasse le solde disponible.'
+          : userError(requestError, 'seller'))
+    }
+    setPayoutRequestNote('')
+    setFeedback('Demande de paiement envoyée à One Market.')
+    await loadWorkspace(selectedStore.id)
+  }
+
+  async function cancelPayoutRequest(request) {
+    if (!request?.id || payoutRequestBusy) return
+    if (!window.confirm('Annuler cette demande de paiement ?')) return
+    setPayoutRequestBusy(true)
+    setFeedback('')
+    const { error: cancelError } = await supabase.rpc('seller_cancel_payout_request', { p_request_id: request.id })
+    setPayoutRequestBusy(false)
+    if (cancelError) {
+      logTechnicalError('seller-payout-request-cancel', cancelError)
+      return setFeedback(userError(cancelError, 'seller'))
+    }
+    setFeedback('Demande de paiement annulée.')
+    await loadWorkspace(selectedStore.id)
+  }
+
   async function toggleProduct(product) {
     setFeedback('')
     try {
