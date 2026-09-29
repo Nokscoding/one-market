@@ -122,7 +122,14 @@ export default function OrderPage() {
   useEffect(() => { load() }, [load])
 
   useEffect(() => {
-    const channel = supabase.channel(`customer-order-${id}`).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'seller_orders' }, () => load()).subscribe()
+    const channel = supabase
+      .channel(`customer-order-${id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${id}` }, () => load())
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'seller_orders' }, payload => {
+        if (payload.new?.order_id === id || payload.old?.order_id === id) load()
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_status_events', filter: `order_id=eq.${id}` }, () => load())
+      .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [id, load])
 
