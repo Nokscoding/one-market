@@ -9,7 +9,7 @@ export const MARKET_CITIES = {
     'Mbuji-Mayi','Kananga','Tshikapa','Mwene-Ditu','Kabinda','Kisangani','Goma','Bukavu',
     'Uvira','Bunia','Beni','Butembo','Kindu','Matadi','Boma','Kikwit','Bandundu','Mbandaka',
     'Gemena','Lisala','Isiro','Buta','Gbadolite','Inongo','Boende','Lodja','Ilebo','Kasongo',
-    'Manono','Pweto','Fungurume','K Likasi'
+    'Manono','Pweto','Fungurume'
   ],
   US: [
     'New York','Los Angeles','Chicago','Houston','Phoenix','Philadelphia','San Antonio',
