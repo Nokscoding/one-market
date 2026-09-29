@@ -97,7 +97,7 @@ export function CartProvider({ children }) {
       const variants = variantResult.data || []
       const storeIds = [...new Set(products.map(product => product.store_id))]
       const storeResult = storeIds.length
-        ? await supabase.from('stores').select('id,name,slug,country_code,currency,status').in('id', storeIds).eq('country_code', 'CD')
+        ? await supabase.from('stores').select('id,name,slug,country_code,city,currency,status').in('id', storeIds).eq('country_code', 'CD')
         : { data: [], error: null }
       if (storeResult.error) throw friendlyCartError(storeResult.error)
       const stores = storeResult.data || []
