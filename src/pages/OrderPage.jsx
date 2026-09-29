@@ -1,4 +1,4 @@
-import { Banknote, Clock3, MapPin, MessageCircle, RefreshCw, Truck, Zap } from 'lucide-react'
+import { Banknote, CheckCircle2, Clock3, MapPin, MessageCircle, PackageCheck, RefreshCw, Truck, Zap } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import EmptyState from '../components/EmptyState'
@@ -15,6 +15,32 @@ function whatsappDigits(value) {
   let digits = String(value || '').replace(/\D/g, '')
   if (digits.startsWith('0')) digits = `243${digits.slice(1)}`
   return digits
+}
+
+
+const STATUS_RANK = {
+  pending_confirmation: 0,
+  confirmed: 1,
+  preparing: 2,
+  ready: 3,
+  picked_up: 4,
+  out_for_delivery: 5,
+  delivered: 6,
+  partially_completed: 6,
+}
+
+function trackingSteps(order) {
+  const intercity = Boolean(order?.is_intercity)
+  const current = STATUS_RANK[order?.status] ?? 0
+  const intercityTransit = order?.logistics_status === 'intercity_transit'
+  const arrived = order?.logistics_status === 'arrived_destination'
+  return [
+    { key:'confirmed', label:'Confirmée', detail:'La commande a été enregistrée et confirmée.', done: current >= 1, current: current === 1, icon:CheckCircle2 },
+    { key:'preparing', label:'En préparation', detail:'Les boutiques préparent vos articles.', done: current >= 3, current: current === 2, icon:PackageCheck },
+    ...(intercity ? [{ key:'intercity', label:'Transport inter-ville', detail: arrived ? 'Les colis sont arrivés dans votre ville.' : 'Les colis sont acheminés vers votre ville.', done: arrived || current >= 5, current: intercityTransit || arrived, icon:Truck }] : []),
+    { key:'delivery', label:'En livraison', detail:'Le livreur One Market se dirige vers vous.', done: current >= 6, current: current === 4 || current === 5, icon:Truck },
+    { key:'delivered', label:'Livrée', detail:'La commande a été remise au client.', done: current >= 6, current: current >= 6, icon:MapPin },
+  ]
 }
 
 function snapshotAddress(snapshot = {}) {
@@ -45,7 +71,7 @@ export default function OrderPage() {
     setError('')
     try {
       const [orderResult, paymentResult] = await Promise.all([
-        supabase.from('orders').select('id,order_number,customer_id,address_id,status,payment_method,payment_status,items_total,delivery_total,grand_total,currency,shipping_snapshot,customer_note,created_at,updated_at,delivery_method,delivery_fee_cdf,delivery_currency,logistics_status').eq('id', id).maybeSingle(),
+        supabase.from('orders').select('id,order_number,customer_id,address_id,status,payment_method,payment_status,items_total,delivery_total,grand_total,currency,shipping_snapshot,customer_note,created_at,updated_at,delivery_method,delivery_fee_cdf,delivery_currency,logistics_status,is_intercity,origin_cities,destination_city,intercity_surcharge_cdf,estimated_delivery_min_days,estimated_delivery_max_days,intercity_arrived_at').eq('id', id).maybeSingle(),
         supabase.from('marketplace_settings').select('value').eq('key', 'payments').maybeSingle(),
       ])
       if (orderResult.error) throw orderResult.error
@@ -73,7 +99,7 @@ export default function OrderPage() {
       const storeIds = [...new Set(list.map(x => x.store_id))]
       const [itemResult, storeResult, convResult] = await Promise.all([
         supabase.from('order_items').select('id,order_id,seller_order_id,store_id,product_id,product_variant_id,product_name,product_image_url,variant_snapshot,unit_price,quantity,line_total,currency,created_at').in('seller_order_id', ids).order('created_at'),
-        supabase.from('stores').select('id,name,slug,country_code,logo_url,is_verified,is_partner').in('id', storeIds),
+        supabase.from('stores').select('id,name,slug,country_code,city,logo_url,is_verified,is_partner').in('id', storeIds),
         supabase.from('conversations').select('id,seller_order_id').in('seller_order_id', ids),
       ])
       if (itemResult.error) throw itemResult.error
@@ -112,6 +138,7 @@ export default function OrderPage() {
   const mobileMoneyNumber = paymentSettings.mobile_money_display || paymentSettings.mobile_money_whatsapp || '0995585991'
   const mobileMoneyLink = `https://wa.me/${whatsappDigits(paymentSettings.mobile_money_whatsapp || mobileMoneyNumber)}?text=${encodeURIComponent(`Bonjour One Market, je souhaite finaliser le paiement Mobile Money de ma commande ${order.order_number}.`)}`
   const shipping = order.shipping_snapshot || {}
+  const tracker = trackingSteps(order)
 
   return (
     <main className="section-shell page-space order-detail-final">
@@ -127,8 +154,23 @@ export default function OrderPage() {
 
       {mobileMoney ? <div className="order-payment-summary"><MessageCircle size={19}/><div><strong>Mobile Money</strong><span>{paymentLabel}.</span>{!['paid','cancelled'].includes(order.payment_status) && <a className="button secondary" href={mobileMoneyLink} target="_blank" rel="noreferrer">Ouvrir WhatsApp</a>}</div></div> : <div className="order-payment-summary"><Banknote size={19}/><div><strong>Paiement à la livraison</strong><span>{paymentLabel}. Le règlement se fait auprès du livreur à la réception.</span></div></div>}
 
+      <section className="order-progress-panel">
+        <div className="order-progress-head"><div><span>Suivi en direct</span><h2>Où en est votre commande ?</h2></div><Truck size={20}/></div>
+        <div className="order-progress-steps">
+          {tracker.map((step,index) => {
+            const Icon = step.icon
+            return <div className={`order-progress-step ${step.done ? 'done' : ''} ${step.current ? 'current' : ''}`} key={step.key}>
+              <div className="order-progress-marker"><Icon size={18}/></div>
+              {index < tracker.length - 1 && <span className="order-progress-line"/>}
+              <div><strong>{step.label}</strong><small>{step.detail}</small></div>
+            </div>
+          })}
+        </div>
+        {order.is_intercity && <div className="order-intercity-summary"><MapPin size={17}/><div><strong>Livraison inter-ville</strong><span>{(order.origin_cities || []).join(', ') || 'Ville de départ'} → {order.destination_city || shipping.city || 'ville de livraison'}</span><small>Estimation : {order.estimated_delivery_min_days || 3} à {order.estimated_delivery_max_days || 7} jours · transport supplémentaire {cdf(order.intercity_surcharge_cdf || 0)}</small></div></div>}
+      </section>
+
       <section className="order-timeline-panel">
-        <div className="order-timeline-head"><div><span>Suivi</span><h2>Historique de la commande</h2></div><Clock3 size={20}/></div>
+        <div className="order-timeline-head"><div><span>Détails</span><h2>Historique de la commande</h2></div><Clock3 size={20}/></div>
         {events.length ? <div className="order-timeline">{events.map((event, index) => <div className="order-timeline-item" key={event.id}><span className={index === events.length - 1 ? 'is-current' : ''}/><div><strong>{event.label || orderStatus[event.status] || 'Mise à jour de la commande'}</strong><small>{dateTime(event.created_at)}</small></div></div>)}</div> : <p className="muted">La commande a été enregistrée. Les prochaines étapes apparaîtront ici.</p>}
       </section>
 
@@ -138,7 +180,7 @@ export default function OrderPage() {
         const store = stores[sub.store_id]
         const conv = conversations[sub.id]
         return <section className="seller-order-card" key={sub.id}>
-          <div className="seller-order-head"><div><SmartImage src={store?.logo_url} fallback={store?.name?.slice(0,2).toUpperCase() || 'OM'} fit="contain" width={100}/><div><span>Boutique</span><div className="order-store-name"><h2>{store?.name || 'Boutique One Market'}</h2><StoreTrustBadge store={store} compact/></div></div></div><span className={`status-pill ${sub.status}`}>{sellerOrderStatus[sub.status] || 'En cours'}</span></div>
+          <div className="seller-order-head"><div><SmartImage src={store?.logo_url} fallback={store?.name?.slice(0,2).toUpperCase() || 'OM'} fit="contain" width={100}/><div><span>Boutique</span><div className="order-store-name"><h2>{store?.name || 'Boutique One Market'}</h2><StoreTrustBadge store={store} compact/></div>{store?.city && <small>Expédié depuis {store.city}</small>}</div></div><span className={`status-pill ${sub.status}`}>{sellerOrderStatus[sub.status] || 'En cours'}</span></div>
           <div className="ordered-items">{(items[sub.id] || []).map(item => <div className="ordered-item" key={item.id}><SmartImage src={item.product_image_url} fallback="OM" fit="contain" width={150}/><div><strong>{item.product_name}</strong>{Object.keys(item.variant_snapshot || {}).length > 0 && <span>{Object.values(item.variant_snapshot).join(' · ')}</span>}<span>{item.quantity} × {money(item.unit_price, sub.currency)}</span></div><strong>{money(item.line_total, sub.currency)}</strong></div>)}</div>
           {sub.status === 'refused' && <div className="refusal-box"><strong>Commande refusée par la boutique</strong><p>{sub.refusal_reason || 'La boutique n’a pas pu accepter cette commande.'}</p></div>}
           <div className="seller-order-footer"><div><span>Sous-total produits</span><strong>{money(sub.subtotal, sub.currency)}</strong><span>Livraison</span><strong>Gérée par One Market</strong></div>{conv && sub.status !== 'refused' && <Link className="button secondary" to={`/chat/${conv.id}`}><MessageCircle size={18}/> Contacter la boutique</Link>}</div>
