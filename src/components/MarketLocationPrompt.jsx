@@ -42,9 +42,11 @@ export default function MarketLocationPrompt() {
       </label>
 
       <label>Ville
-        <input list="one-market-city-list" value={city} onChange={event => setCity(event.target.value)} placeholder="Choisissez ou écrivez votre ville" autoComplete="address-level2"/>
-        <datalist id="one-market-city-list">{cities.map(name => <option value={name} key={name}/>)}</datalist>
-        <small>Votre ville n’est pas dans la liste ? Écrivez simplement son nom.</small>
+        <select value={city} onChange={event => setCity(event.target.value)} autoComplete="address-level2">
+          <option value="" disabled>Choisissez votre ville</option>
+          {cities.map(name => <option value={name} key={name}>{name}</option>)}
+        </select>
+        <small>Sélectionnez la ville dans laquelle vous souhaitez faire vos achats.</small>
       </label>
 
       <button className="button primary market-location-submit" disabled={!city.trim()}>Continuer sur One Market</button>
