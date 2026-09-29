@@ -6,12 +6,15 @@ import Loader from '../components/Loader'
 import ProductCard from '../components/ProductCard'
 import SmartImage from '../components/SmartImage'
 import { useAuth } from '../context/AuthContext'
+import { useMarketLocation } from '../context/MarketLocationContext'
 import { recordProductView } from '../lib/productInterest'
+import { rankProductsForLocation } from '../lib/marketLocation'
 import { supabase } from '../lib/supabase'
 import { logTechnicalError, userError } from '../lib/userErrors'
 
 export default function Catalog() {
   const { user } = useAuth()
+  const { location: marketLocation } = useMarketLocation()
   const [params, setParams] = useSearchParams()
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
@@ -81,6 +84,7 @@ export default function Catalog() {
       }
       list = list.map(product => ({ ...product, sponsored: paidProductIds.has(product.id) || categoryFeaturedIds.has(product.id) }))
       list.sort((a,b) => Number(Boolean(b.sponsored)) - Number(Boolean(a.sponsored)))
+      list = rankProductsForLocation(list, marketLocation)
 
       setProducts(list)
     })().catch(loadError => {
@@ -92,7 +96,7 @@ export default function Catalog() {
     }).finally(() => { if (active) setLoading(false) })
 
     return () => { active = false }
-  }, [q, category, view, sort, retryKey])
+  }, [q, category, view, sort, retryKey, marketLocation.countryCode, marketLocation.city])
 
   function recordSearchInterest(product) {
     const query = q.trim().slice(0, 120)
@@ -151,7 +155,7 @@ export default function Catalog() {
 
   return (
     <main className="section-shell page-space">
-      <div className="page-title"><span className="eyebrow">One Market</span><h1>{title}</h1><p>{products.length} produit{products.length > 1 ? 's' : ''}</p></div>
+      <div className="page-title"><span className="eyebrow">One Market · {marketLocation.city || (marketLocation.countryCode === 'US' ? 'États-Unis' : 'RDC')}</span><h1>{title}</h1><p>{products.length} produit{products.length > 1 ? 's' : ''} · les articles de votre ville apparaissent en priorité</p></div>
       <div className="catalog-toolbar">
         <div className="filter-title"><SlidersHorizontal size={18}/> Filtres</div>
         <select value={category} onChange={e => setFilter('category', e.target.value)}><option value="">Toutes les catégories</option>{categories.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}</select>
