@@ -63,6 +63,7 @@ export default function CheckoutPage() {
   const [selectedDelivery, setSelectedDelivery] = useState(deliveryMethod || 'standard')
   const [deliverySaving, setDeliverySaving] = useState(false)
   const [paymentSettings, setPaymentSettings] = useState(DEFAULT_PAYMENT_SETTINGS)
+  const [logisticsSettings, setLogisticsSettings] = useState({ intercity_surcharge_cdf: 25000, intercity_standard_min_days: 3, intercity_standard_max_days: 7, intercity_express_min_days: 2, intercity_express_max_days: 5 })
   const [paymentMethod, setPaymentMethod] = useState('cod')
   const [promoCode, setPromoCode] = useState('')
   const [promoQuote, setPromoQuote] = useState(null)
@@ -71,6 +72,19 @@ export default function CheckoutPage() {
 
   useEffect(() => { setSelectedDelivery(deliveryMethod || 'standard') }, [deliveryMethod])
   useEffect(() => { setForm(current => ({ ...current, full_name: current.full_name || profile?.full_name || '', phone: current.phone || profile?.phone || '' })) }, [profile?.full_name, profile?.phone])
+
+  useEffect(() => {
+    let active = true
+    supabase.from('marketplace_settings').select('value').eq('key', 'logistics').maybeSingle().then(({ data, error: settingsError }) => {
+      if (!active) return
+      if (settingsError) {
+        logTechnicalError('checkout-logistics-settings', settingsError)
+        return
+      }
+      if (data?.value) setLogisticsSettings(current => ({ ...current, ...data.value }))
+    })
+    return () => { active = false }
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -122,7 +136,7 @@ export default function CheckoutPage() {
         if (!product || !active) { setBuyItem(null); return }
 
         const [storeResult, imagesResult, variantResult] = await Promise.all([
-          supabase.from('stores').select('id,name,slug,country_code,status').eq('id', product.store_id).eq('country_code', 'CD').eq('status', 'active').maybeSingle(),
+          supabase.from('stores').select('id,name,slug,country_code,city,status').eq('id', product.store_id).eq('country_code', 'CD').eq('status', 'active').maybeSingle(),
           supabase.from('product_images').select('secure_url,sort_order').eq('product_id', product.id).order('sort_order').limit(1),
           buyVariantId ? supabase.from('product_variants').select('id,product_id,price,stock_qty,attributes,is_active').eq('id', buyVariantId).eq('product_id', product.id).eq('is_active', true).maybeSingle() : Promise.resolve({ data: null, error: null }),
         ])
@@ -148,8 +162,23 @@ export default function CheckoutPage() {
   const checkoutTotal = useMemo(() => buyNowMode ? (buyItem ? buyItem.unitPrice * buyItem.quantity : 0) : total, [buyNowMode, buyItem, total])
   const checkoutCount = checkoutItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
   const chosenDelivery = deliveryOption(selectedDelivery)
-  const displayedDeliveryFee = selectedDelivery === deliveryMethod ? deliveryFeeCdf : chosenDelivery.feeCdf
   const selectedAddress = addresses.find(address => address.id === selected) || null
+  const intercityStoreCount = useMemo(() => {
+    const city = String(selectedAddress?.city || '').trim().toLocaleLowerCase('fr')
+    if (!city) return 0
+    return new Set(checkoutItems
+      .map(item => String(item.store?.city || '').trim())
+      .filter(storeCity => storeCity && storeCity.toLocaleLowerCase('fr') !== city)
+      .map(storeCity => storeCity.toLocaleLowerCase('fr'))).size
+  }, [checkoutItems, selectedAddress?.city])
+  const baseDeliveryFee = selectedDelivery === deliveryMethod ? deliveryFeeCdf : chosenDelivery.feeCdf
+  const intercitySurcharge = intercityStoreCount * Math.max(0, Number(logisticsSettings.intercity_surcharge_cdf || 25000))
+  const displayedDeliveryFee = baseDeliveryFee + intercitySurcharge
+  const deliveryEstimate = intercityStoreCount
+    ? selectedDelivery === 'express'
+      ? [Number(logisticsSettings.intercity_express_min_days || 2), Number(logisticsSettings.intercity_express_max_days || 5)]
+      : [Number(logisticsSettings.intercity_standard_min_days || 3), Number(logisticsSettings.intercity_standard_max_days || 7)]
+    : null
   const mobileMoneyAvailable = paymentSettings.mobile_money_enabled === true && paymentSettings.mobile_money_coming_soon !== true
   const mobileMoneyNumber = paymentSettings.mobile_money_display || paymentSettings.mobile_money_whatsapp || '0995585991'
   const promoDiscount = Number(promoQuote?.discount_total || 0)
@@ -336,6 +365,7 @@ export default function CheckoutPage() {
           <section className="checkout-market-section">
             <div className="checkout-market-section-head"><span>3</span><div><h2>Livraison</h2><p>Choisissez le service qui vous convient.</p></div></div>
             <div className="checkout-delivery-grid">{DELIVERY_OPTIONS.map(option => <button type="button" disabled={deliverySaving} key={option.code} className={`checkout-delivery-option ${selectedDelivery === option.code ? 'active' : ''}`} onClick={() => chooseDelivery(option.code)}><div className="checkout-delivery-icon">{option.code === 'express' ? <Zap size={21}/> : <Truck size={21}/>}</div><div><strong>{option.label}</strong><span>{option.description}</span></div><b>{cdf(option.feeCdf)}</b><div className="payment-radio">{selectedDelivery === option.code && <Check size={15}/>}</div></button>)}</div>
+            {intercityStoreCount > 0 && <div className="checkout-intercity-note"><Truck size={18}/><div><strong>Transport inter-ville</strong><span>{intercityStoreCount} ville{intercityStoreCount > 1 ? 's' : ''} d’origine différente de {selectedAddress?.city}. Supplément transport : {cdf(intercitySurcharge)}.</span>{deliveryEstimate && <small>Délai estimé : {deliveryEstimate[0]} à {deliveryEstimate[1]} jours.</small>}</div></div>}
           </section>
 
           <section className="checkout-market-section">
@@ -351,7 +381,7 @@ export default function CheckoutPage() {
             <div className="checkout-market-section-head"><span>5</span><div><h2>Vérification</h2><p>Contrôlez les informations avant de confirmer.</p></div></div>
             <div className="checkout-review-grid">
               <div><MapPin size={18}/><span><strong>Livraison à</strong>{selectedAddress ? <>{<b>{addressTypeLabel(selectedAddress.address_type, selectedAddress.label)}</b>}<small>{selectedAddress.full_name} · {selectedAddress.phone}</small>{addressLines(selectedAddress).map((line, index) => <small key={index}>{line}</small>)}</> : <small>Aucune adresse sélectionnée</small>}</span>{selectedAddress && <button type="button" onClick={() => document.querySelector('.checkout-address-grid')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>Modifier</button>}</div>
-              <div><Truck size={18}/><span><strong>Livraison</strong><b>{chosenDelivery.label}</b><small>{cdf(displayedDeliveryFee)}</small></span></div>
+              <div><Truck size={18}/><span><strong>Livraison</strong><b>{chosenDelivery.label}{intercityStoreCount ? ' · inter-ville' : ''}</b><small>{cdf(displayedDeliveryFee)}{deliveryEstimate ? ` · ${deliveryEstimate[0]}–${deliveryEstimate[1]} jours` : ''}</small></span></div>
               <div><Banknote size={18}/><span><strong>Paiement</strong><b>{paymentMethod === 'mobile_money' ? 'Mobile Money' : 'Paiement à la livraison'}</b><small>{paymentMethod === 'mobile_money' ? `Assistance : ${mobileMoneyNumber}` : 'À régler à la réception'}</small></span></div>
             </div>
           </section>

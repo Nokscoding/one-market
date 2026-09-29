@@ -70,6 +70,8 @@ export const logisticsStatus = {
   pending: 'En attente',
   preparing: 'En préparation',
   ready: 'Prête',
+  intercity_transit: 'Transport inter-ville',
+  arrived_destination: 'Arrivée dans votre ville',
   picked_up: 'Récupérée par le livreur',
   out_for_delivery: 'En livraison',
   delivered: 'Livrée',

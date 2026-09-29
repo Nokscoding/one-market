@@ -6,6 +6,7 @@ import Footer from './components/Footer'
 import Header from './components/Header'
 import NotificationCenter from './components/NotificationCenter'
 import NotificationPermissionPrompt from './components/NotificationPermissionPrompt'
+import MarketLocationPrompt from './components/MarketLocationPrompt'
 import ReportProblem from './components/ReportProblem'
 import SiteIntro from './components/SiteIntro'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -90,6 +91,7 @@ export default function App() {
       </div>
 
       {!standalonePage && <Footer />}
+      {!introVisible && <MarketLocationPrompt />}
       {!introVisible && <NotificationPermissionPrompt />}
       {!introVisible && !sellerPage && <CookieConsent />}
     </div>

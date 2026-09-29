@@ -46,7 +46,7 @@ export default function ProductPage() {
       setProduct(p || null)
       if (p) {
         const [storeResult, imageResult, variantResult] = await Promise.all([
-          supabase.from('stores').select('id,owner_id,name,slug,description,logo_url,banner_url,country_code,city,currency,status,primary_category_id,phone,website_url,instagram_url,tiktok_url,facebook_url,linkedin_url,whatsapp_business,is_verified,is_partner').eq('id', p.store_id).eq('country_code', 'CD').eq('status', 'active').maybeSingle(),
+          supabase.from('stores').select('id,owner_id,name,slug,description,logo_url,banner_url,country_code,city,currency,status,primary_category_id,phone,website_url,instagram_url,tiktok_url,facebook_url,linkedin_url,whatsapp_business,is_verified,is_partner').eq('id', p.store_id).in('country_code', ['CD','US']).eq('status', 'active').maybeSingle(),
           supabase.from('product_images').select('id,product_id,secure_url,alt_text,sort_order,created_at').eq('product_id', p.id).order('sort_order'),
           supabase.from('product_variants').select('id,product_id,sku,attributes,price,stock_qty,is_active,created_at').eq('product_id', p.id).eq('is_active', true).order('created_at'),
         ])
@@ -96,6 +96,7 @@ export default function ProductPage() {
 
   function validatePurchase() {
     setError('')
+    if (store?.country_code !== 'CD') { setError('Les achats One Market USA sont en préparation. Vous pouvez déjà découvrir les boutiques et produits américains.'); return false }
     if (product?.has_variants && !variantId) { setError('Choisissez une option.'); return false }
     if (stock <= 0) { setError('Ce produit est actuellement en rupture de stock.'); return false }
     return true
@@ -144,7 +145,7 @@ export default function ProductPage() {
         </section>
 
         <section className="product-detail">
-          <div className="product-detail-topline"><span className="eyebrow">Boutique RDC</span><FavoriteButton productId={product.id} className="favorite-button--detail" showLabel/></div>
+          <div className="product-detail-topline"><span className="eyebrow">{store.country_code === 'US' ? 'Boutique USA' : 'Boutique RDC'}{store.city ? ' · ' + store.city : ''}</span><FavoriteButton productId={product.id} className="favorite-button--detail" showLabel/></div>
           <h1>{product.name}</h1>
           <div className="seller-link-row"><Link to={`/store/${store.slug}`} className="seller-link"><Store size={17}/> {store.name}</Link><StoreTrustBadge store={store} compact/></div>
           <div className="product-detail-rating"><RatingStars value={rating} count={reviewCount}/><a href="#reviews">{reviewCount ? 'Lire les avis' : 'Soyez le premier à donner un avis'}</a></div>
@@ -155,8 +156,8 @@ export default function ProductPage() {
           <div className="product-delivery-preview"><div className="product-delivery-preview-head"><Truck size={19}/><div><strong>Livraison One Market</strong><span>Choisissez la livraison normale ou express lors de votre commande.</span></div></div><div>{DELIVERY_OPTIONS.map(option => <span key={option.code}><strong>{option.label}</strong><b>{cdf(option.feeCdf)}</b><small>{option.description}</small></span>)}</div></div>
 
           {product.has_variants && <div className="field-block"><label>Option</label><div className="variant-list">{variants.map(v => <button type="button" key={v.id} className={variantId === v.id ? 'active' : ''} onClick={() => setVariantId(v.id)}>{Object.values(v.attributes || {}).join(' · ') || 'Option'}</button>)}</div></div>}
-          <div className="purchase-row purchase-row--marketplace"><div className="qty-control"><button type="button" onClick={() => setQty(q => Math.max(1, q - 1))}><Minus size={16}/></button><span>{qty}</span><button type="button" onClick={() => setQty(q => Math.min(Math.max(stock, 1), q + 1))}><Plus size={16}/></button></div><div className="purchase-main-actions"><button type="button" className="button primary grow" disabled={adding || stock <= 0} onClick={add}><ShoppingBag size={18}/> {stock <= 0 ? 'Rupture de stock' : adding ? 'Ajout…' : 'Ajouter au panier'}</button><button type="button" className="button buy-now-button grow" disabled={adding || stock <= 0} onClick={buyNow}><Zap size={18}/> Acheter maintenant</button></div></div>
-          {error && <p className="form-error">{error}</p>}
+          <div className="purchase-row purchase-row--marketplace"><div className="qty-control"><button type="button" onClick={() => setQty(q => Math.max(1, q - 1))}><Minus size={16}/></button><span>{qty}</span><button type="button" onClick={() => setQty(q => Math.min(Math.max(stock, 1), q + 1))}><Plus size={16}/></button></div><div className="purchase-main-actions"><button type="button" className="button primary grow" disabled={adding || stock <= 0 || store.country_code !== 'CD'} onClick={add}><ShoppingBag size={18}/> {stock <= 0 ? 'Rupture de stock' : adding ? 'Ajout…' : 'Ajouter au panier'}</button><button type="button" className="button buy-now-button grow" disabled={adding || stock <= 0 || store.country_code !== 'CD'} onClick={buyNow}><Zap size={18}/> Acheter maintenant</button></div></div>
+          {store.country_code !== 'CD' && <p className="form-error">One Market USA est visible dès maintenant, mais le checkout et la livraison USA seront activés dans une prochaine étape.</p>}{error && <p className="form-error">{error}</p>}
           <div className="purchase-note"><strong>Paiement à la livraison</strong><span>Payez directement le livreur au moment de recevoir votre commande.</span></div>
           <div className="product-report-row"><ReportProblem source="product_page" product={product} store={store}/></div>
         </section>

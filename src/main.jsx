@@ -6,12 +6,14 @@ import { AuthProvider } from './context/AuthContext'
 import { CartProvider } from './context/CartContext'
 import { FavoritesProvider } from './context/FavoritesContext'
 import { NotificationsProvider } from './context/NotificationsContext'
+import { MarketLocationProvider } from './context/MarketLocationContext'
 import './styles.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
+        <MarketLocationProvider>
         <NotificationsProvider>
           <FavoritesProvider>
             <CartProvider>
@@ -19,6 +21,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             </CartProvider>
           </FavoritesProvider>
         </NotificationsProvider>
+        </MarketLocationProvider>
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>,

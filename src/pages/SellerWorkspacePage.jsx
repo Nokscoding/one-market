@@ -146,6 +146,11 @@ export default function SellerWorkspacePage() {
   const [parentOrders, setParentOrders] = useState({})
   const [conversations, setConversations] = useState([])
   const [payouts, setPayouts] = useState([])
+  const [payoutRequests, setPayoutRequests] = useState([])
+  const [payoutBalance, setPayoutBalance] = useState({ eligible_unpaid: 0, pending_requests: 0, available_to_request: 0, currency: 'USD' })
+  const [payoutRequestAmount, setPayoutRequestAmount] = useState('')
+  const [payoutRequestNote, setPayoutRequestNote] = useState('')
+  const [payoutRequestBusy, setPayoutRequestBusy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [workspaceLoading, setWorkspaceLoading] = useState(false)
   const [storeSaving, setStoreSaving] = useState(false)
@@ -232,16 +237,20 @@ export default function SellerWorkspacePage() {
     setWorkspaceLoading(true)
     setFeedback('')
     try {
-      const [productResult, orderResult, conversationResult, payoutResult] = await Promise.all([
+      const [productResult, orderResult, conversationResult, payoutResult, payoutRequestResult, payoutBalanceResult] = await Promise.all([
         supabase.from('products').select('id,store_id,category_id,name,slug,description,price,old_price,currency,stock_qty,has_variants,is_active,is_demo,created_at,updated_at').eq('store_id', storeId).order('created_at', { ascending: false }),
         supabase.from('seller_orders').select('id,order_id,store_id,seller_order_number,status,subtotal,currency,refusal_reason,created_at,updated_at,delivery_method,delivery_fee_cdf,delivery_currency,logistics_status,commission_percent,commission_amount,seller_net_amount,settlement_status').eq('store_id', storeId).order('created_at', { ascending: false }).limit(150),
         supabase.from('conversations').select('id,seller_order_id,store_id,customer_id,created_at,updated_at').eq('store_id', storeId).order('updated_at', { ascending: false }).limit(100),
         supabase.from('seller_payouts').select('id,payout_number,store_id,period_start,period_end,gross_amount,commission_amount,net_amount,currency,payment_method,payment_reference,status,scheduled_at,paid_at,created_at').eq('store_id', storeId).order('created_at', { ascending: false }).limit(100),
+        supabase.from('seller_payout_requests').select('id,store_id,seller_user_id,requested_amount,currency,status,seller_note,admin_note,payout_id,created_at,updated_at,reviewed_at').eq('store_id', storeId).order('created_at',{ascending:false}).limit(50),
+        supabase.rpc('seller_payout_balance',{p_store_id:storeId}),
       ])
       if (productResult.error) throw productResult.error
       if (orderResult.error) throw orderResult.error
       if (conversationResult.error) throw conversationResult.error
       if (payoutResult.error) throw payoutResult.error
+      if (payoutRequestResult.error && !isAdmin) throw payoutRequestResult.error
+      if (payoutBalanceResult.error && !isAdmin) throw payoutBalanceResult.error
 
       const productList = productResult.data || []
       const orderList = orderResult.data || []
@@ -250,6 +259,9 @@ export default function SellerWorkspacePage() {
       setConversations(conversationResult.data || [])
       setPickupCodes({})
       setPayouts(payoutResult.data || [])
+      setPayoutRequests(payoutRequestResult.data || [])
+      setPayoutBalance(payoutBalanceResult.data || { eligible_unpaid: 0, pending_requests: 0, available_to_request: 0, currency: 'USD' })
+      setPayoutRequestAmount(String(Number(payoutBalanceResult.data?.available_to_request || 0).toFixed(2)))
 
       const productIds = productList.map(item => item.id)
       const sellerOrderIds = orderList.map(item => item.id)
@@ -414,6 +426,51 @@ export default function SellerWorkspacePage() {
     }
   }
 
+  async function requestPayout(event) {
+    event.preventDefault()
+    if (!selectedStore?.id || payoutRequestBusy) return
+    const amount = Number(payoutRequestAmount)
+    const available = Number(payoutBalance?.available_to_request || 0)
+    if (!Number.isFinite(amount) || amount <= 0) return setFeedback('Indiquez un montant de versement valide.')
+    if (amount > available) return setFeedback('Le montant demandé dépasse le solde disponible.')
+
+    setPayoutRequestBusy(true)
+    setFeedback('')
+    const { error: requestError } = await supabase.rpc('seller_request_payout', {
+      p_store_id: selectedStore.id,
+      p_amount: Number(amount.toFixed(2)),
+      p_note: payoutRequestNote.trim() || null,
+    })
+    setPayoutRequestBusy(false)
+    if (requestError) {
+      logTechnicalError('seller-payout-request', requestError)
+      const raw = String(requestError.message || '')
+      return setFeedback(raw.includes('NO_AVAILABLE_PAYOUT_BALANCE')
+        ? 'Aucun solde n’est encore disponible au versement.'
+        : raw.includes('PAYOUT_REQUEST_AMOUNT_INVALID')
+          ? 'Ce montant dépasse le solde disponible.'
+          : userError(requestError, 'seller'))
+    }
+    setPayoutRequestNote('')
+    setFeedback('Demande de paiement envoyée à One Market.')
+    await loadWorkspace(selectedStore.id)
+  }
+
+  async function cancelPayoutRequest(request) {
+    if (!request?.id || payoutRequestBusy) return
+    if (!window.confirm('Annuler cette demande de paiement ?')) return
+    setPayoutRequestBusy(true)
+    setFeedback('')
+    const { error: cancelError } = await supabase.rpc('seller_cancel_payout_request', { p_request_id: request.id })
+    setPayoutRequestBusy(false)
+    if (cancelError) {
+      logTechnicalError('seller-payout-request-cancel', cancelError)
+      return setFeedback(userError(cancelError, 'seller'))
+    }
+    setFeedback('Demande de paiement annulée.')
+    await loadWorkspace(selectedStore.id)
+  }
+
   async function toggleProduct(product) {
     setFeedback('')
     try {
@@ -474,13 +531,22 @@ export default function SellerWorkspacePage() {
     const lowStock = products.filter(product => product.is_active && Number(product.stock_qty) <= 5).length
     const pendingOrders = orders.filter(order => ACTIVE_ORDER_STATUSES.has(order.status)).length
     const delivered = orders.filter(order => order.status === 'delivered')
+    const eligibleDelivered = delivered.filter(order => {
+      const parent = parentOrders[order.order_id]
+      if (!parent) return false
+      if (parent.payment_method === 'mobile_money') return parent.payment_status === 'paid'
+      return parent.payment_method === 'cod' && parent.payment_status === 'cash_received'
+    })
     const deliveredRevenue = delivered.reduce((sum, order) => sum + Number(order.subtotal || 0), 0)
     const deliveredCommission = delivered.reduce((sum, order) => sum + Number(order.commission_amount || 0), 0)
     const sellerEarnings = delivered.reduce((sum, order) => sum + Number(order.seller_net_amount || 0), 0)
+    const eligibleEarnings = eligibleDelivered.reduce((sum, order) => sum + Number(order.seller_net_amount || 0), 0)
     const paid = payouts.filter(payout => payout.status === 'paid').reduce((sum, payout) => sum + Number(payout.net_amount || 0), 0)
-    const due = Math.max(0, sellerEarnings - paid)
-    return { activeProducts, lowStock, pendingOrders, deliveredRevenue, deliveredCommission, sellerEarnings, paid, due, deliveredOrders: delivered.length }
-  }, [products, orders, payouts])
+    const backendEligible = Number(payoutBalance?.eligible_unpaid ?? eligibleEarnings)
+    const due = Math.max(0, Number(payoutBalance?.available_to_request ?? Math.max(0, backendEligible - paid)))
+    const pendingCash = Math.max(0, sellerEarnings - backendEligible)
+    return { activeProducts, lowStock, pendingOrders, deliveredRevenue, deliveredCommission, sellerEarnings, eligibleEarnings: backendEligible, paid, due, pendingCash, deliveredOrders: delivered.length }
+  }, [products, orders, payouts, parentOrders, payoutBalance])
 
   const filteredProducts = useMemo(() => {
     const query = productSearch.trim().toLowerCase()
@@ -593,8 +659,21 @@ export default function SellerWorkspacePage() {
             <article><span>Ventes livrées</span><strong>{money(stats.deliveredRevenue, 'USD')}</strong><small>{stats.deliveredOrders} commande{stats.deliveredOrders > 1 ? 's' : ''}</small></article>
             <article><span>Commission One Market</span><strong>{money(stats.deliveredCommission, 'USD')}</strong><small>Calculée selon le taux appliqué à chaque commande</small></article>
             <article><span>Vos revenus nets</span><strong>{money(stats.sellerEarnings, 'USD')}</strong><small>Après commission</small></article>
-            <article><span>À recevoir</span><strong>{money(stats.due, 'USD')}</strong><small>Selon les versements enregistrés</small></article>
+            <article><span>Disponible au versement</span><strong>{money(stats.due, 'USD')}</strong><small>Uniquement après paiement confirmé / cash remis à One Market</small></article>
           </div>
+          {stats.pendingCash > 0 && <div className="seller-finance-lock-note"><WalletCards size={18}/><div><strong>En attente de remise COD : {money(stats.pendingCash,'USD')}</strong><span>Ce montant est livré mais ne devient payable qu’après remise et confirmation du cash par One Market.</span></div></div>}
+          <section className="seller-panel seller-payout-request-panel">
+            <div className="seller-panel-head"><div><h2>Demander un versement</h2><p>Vous pouvez demander uniquement le montant déjà encaissé et validé par One Market.</p></div></div>
+            <form className="seller-payout-request-form" onSubmit={requestPayout}>
+              <label>Montant<input type="number" min="0.01" step="0.01" max={Number(payoutBalance?.available_to_request || 0)} value={payoutRequestAmount} onChange={event => setPayoutRequestAmount(event.target.value)} disabled={payoutRequestBusy || Number(payoutBalance?.available_to_request || 0) <= 0}/><small>Disponible : {money(payoutBalance?.available_to_request || 0,'USD')}</small></label>
+              <label>Note <small>Facultatif</small><input value={payoutRequestNote} maxLength={300} onChange={event => setPayoutRequestNote(event.target.value)} placeholder="Ex. Versement Mobile Money"/></label>
+              <button className="button primary" disabled={payoutRequestBusy || Number(payoutBalance?.available_to_request || 0) <= 0}>{payoutRequestBusy ? 'Envoi…' : 'Demander le paiement'}</button>
+            </form>
+            <div className="seller-payout-request-list">
+              {payoutRequests.map(request => <div key={request.id}><span><strong>{money(request.requested_amount, request.currency)}</strong><small>{formatDate(request.created_at)}{request.admin_note ? ' · ' + request.admin_note : ''}</small></span><span className={'status-pill ' + request.status}>{request.status === 'requested' ? 'Demandé' : request.status === 'approved' ? 'Approuvé' : request.status === 'fulfilled' ? 'Payé' : request.status === 'rejected' ? 'Refusé' : 'Annulé'}</span>{request.status === 'requested' && <button type="button" className="text-button" disabled={payoutRequestBusy} onClick={() => cancelPayoutRequest(request)}>Annuler</button>}</div>)}
+              {!payoutRequests.length && <div className="seller-empty compact"><WalletCards size={22}/><strong>Aucune demande</strong><span>Vos demandes de versement apparaîtront ici.</span></div>}
+            </div>
+          </section>
           <section className="seller-panel"><div className="seller-panel-head"><div><h2>Historique des versements</h2><p>Ces informations sont en lecture seule. Les paiements sont validés par One Market.</p></div></div><div className="seller-payout-table"><div className="seller-payout-head"><span>Référence</span><span>Période</span><span>Montant net</span><span>Statut</span></div>{payouts.map(payout => <div key={payout.id}><span><strong>{payout.payout_number}</strong><small>{payout.payment_method || 'Mode à confirmer'}</small></span><span>{formatDate(payout.period_start)} – {formatDate(payout.period_end)}</span><strong>{money(payout.net_amount, payout.currency)}</strong><span className={`status-pill ${payout.status}`}>{payout.status === 'paid' ? 'Payé' : payout.status === 'approved' ? 'Approuvé' : payout.status === 'failed' ? 'Échec' : payout.status === 'cancelled' ? 'Annulé' : 'En attente'}</span></div>)}{!payouts.length && <div className="seller-empty"><WalletCards size={26}/><strong>Aucun versement enregistré</strong><span>Les versements apparaîtront ici lorsqu’ils seront préparés par One Market.</span></div>}</div></section>
         </section>}
 

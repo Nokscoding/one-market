@@ -35,7 +35,7 @@ export default function StorePage() {
     async function run() {
       setLoading(true)
       setError('')
-      const storeResult = await supabase.from('stores').select('id,owner_id,name,slug,description,logo_url,banner_url,country_code,city,currency,status,primary_category_id,phone,website_url,instagram_url,tiktok_url,facebook_url,linkedin_url,whatsapp_business,is_verified,is_partner,created_at').eq('slug', slug).eq('status', 'active').eq('country_code', 'CD').maybeSingle()
+      const storeResult = await supabase.from('stores').select('id,owner_id,name,slug,description,logo_url,banner_url,country_code,city,currency,status,primary_category_id,phone,website_url,instagram_url,tiktok_url,facebook_url,linkedin_url,whatsapp_business,is_verified,is_partner,created_at').eq('slug', slug).eq('status', 'active').in('country_code', ['CD','US']).maybeSingle()
       if (storeResult.error) throw storeResult.error
       if (!active) return
       const s = storeResult.data || null
@@ -95,7 +95,7 @@ export default function StorePage() {
           <div className="store-profile-copy">
             <div className="store-profile-title"><h1>{store.name}</h1><StoreTrustBadge store={store}/></div>
             <p>{store.description || 'Découvrez les produits proposés par cette boutique sur One Market.'}</p>
-            <div className="store-public-meta"><span><MapPin size={15}/>{store.city ? `${store.city}, ` : ''}RDC</span>{categoryName && <span>{categoryName}</span>}{rating.count > 0 && <span><Star size={15}/>{rating.value.toFixed(1)} · {rating.count} avis produit{rating.count > 1 ? 's' : ''}</span>}{store.phone && <span><Phone size={15}/>{store.phone}</span>}</div>
+            <div className="store-public-meta"><span><MapPin size={15}/>{store.city ? store.city + ', ' : ''}{store.country_code === 'US' ? 'États-Unis' : 'RDC'}</span>{categoryName && <span>{categoryName}</span>}{rating.count > 0 && <span><Star size={15}/>{rating.value.toFixed(1)} · {rating.count} avis produit{rating.count > 1 ? 's' : ''}</span>}{store.phone && <span><Phone size={15}/>{store.phone}</span>}</div>
             {socials.length > 0 && <div className="store-social-links">{socials.map(item => <a key={item.label} href={item.href} target="_blank" rel="noreferrer">{item.label}<ExternalLink size={13}/></a>)}</div>}
             <div className="store-report-row"><ReportProblem source="store_page" store={store} orderItems={products.map(product => ({ product_id: product.id, product_name: product.name, store_id: store.id }))}/></div>
           </div>
