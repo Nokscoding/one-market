@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
+import { useMarketLocation } from '../context/MarketLocationContext'
 import AllMenuDrawer from './AllMenuDrawer'
 import Logo from './Logo'
 import NotificationCenter from './NotificationCenter'
@@ -16,6 +17,7 @@ export default function Header() {
   const navigate = useNavigate()
   const { user, profile } = useAuth()
   const { count } = useCart()
+  const { location: marketLocation, openChooser } = useMarketLocation()
 
   function search(e) {
     e.preventDefault()
@@ -42,7 +44,7 @@ export default function Header() {
       <header className="site-header market-header">
         <div className="market-topbar"><div className="market-topbar-inner">
           <Logo />
-          <Link className="market-location desktop-location" to="/catalog"><MapPin size={19}/><span><small>Marketplace</small><strong>RDC</strong></span></Link>
+          <button className="market-location desktop-location" type="button" onClick={openChooser}><MapPin size={19}/><span><small>{marketLocation.countryCode === 'US' ? 'États-Unis' : 'RDC'}</small><strong>{marketLocation.city || 'Choisir une ville'}</strong></span></button>
           <form className="nav-search market-search" onSubmit={search}><select aria-label="Catégorie" defaultValue="all" onChange={e => { if (e.target.value === 'stores') navigate('/stores'); if (e.target.value === 'all') navigate('/catalog') }}><option value="all">Tous</option><option value="stores">Boutiques</option></select><input value={q} onChange={e => setQ(e.target.value)} placeholder="Rechercher sur One Market"/><button type="submit" aria-label="Rechercher"><Search size={22}/></button></form>
           <div className="nav-actions market-actions">
             <Link className="market-account" to={user ? '/account' : '/auth'}><UserRound className="mobile-account-icon" size={21}/><span><small>{user ? `Bonjour${firstName ? `, ${firstName}` : ''}` : 'Bonjour'}</small><strong>{user ? 'Mon compte' : 'Se connecter'}</strong></span></Link>
@@ -50,7 +52,7 @@ export default function Header() {
             {user && <NotificationCenter/>}
             <Link className="market-cart" to={user ? '/cart' : '/auth'} aria-label="Panier"><span className="market-cart-icon"><ShoppingCart size={29}/>{count > 0 && <b>{count > 99 ? '99+' : count}</b>}</span><strong>Panier</strong></Link>
           </div>
-        </div><div className="mobile-search-row"><form className="mobile-market-search" onSubmit={search}><input aria-label="Rechercher" value={q} onChange={e => setQ(e.target.value)} placeholder="Rechercher un produit ou une boutique"/><button type="submit" aria-label="Rechercher"><Search size={20}/></button></form><Link className="mobile-location-button" to="/catalog" aria-label="Explorer One Market RDC"><MapPin size={23}/></Link></div></div>
+        </div><div className="mobile-search-row"><form className="mobile-market-search" onSubmit={search}><input aria-label="Rechercher" value={q} onChange={e => setQ(e.target.value)} placeholder="Rechercher un produit ou une boutique"/><button type="submit" aria-label="Rechercher"><Search size={20}/></button></form><button className="mobile-location-button" type="button" onClick={openChooser} aria-label="Changer de ville"><MapPin size={23}/></button></div></div>
         <div className="market-subnav"><div className="market-subnav-inner"><button className="all-link" onClick={() => setOpen(true)} aria-expanded={open} aria-controls="one-market-all-menu"><Menu size={18}/> Tout</button><NavLink to="/catalog?view=new">Nouveautés</NavLink><NavLink to="/catalog">Produits</NavLink><NavLink to="/stores">Boutiques</NavLink><NavLink to="/catalog?view=categories">Catégories</NavLink><NavLink to={user ? '/seller' : '/auth'} className="seller-entry-link">{user ? sellerLabel : 'Devenir vendeur'}</NavLink><span className="subnav-message">Plusieurs boutiques. Un seul marché.</span></div></div>
         <AllMenuDrawer open={open} onClose={() => setOpen(false)} user={user} profile={profile}/>
       </header>
