@@ -542,10 +542,11 @@ export default function SellerWorkspacePage() {
     const sellerEarnings = delivered.reduce((sum, order) => sum + Number(order.seller_net_amount || 0), 0)
     const eligibleEarnings = eligibleDelivered.reduce((sum, order) => sum + Number(order.seller_net_amount || 0), 0)
     const paid = payouts.filter(payout => payout.status === 'paid').reduce((sum, payout) => sum + Number(payout.net_amount || 0), 0)
-    const due = Math.max(0, eligibleEarnings - paid)
-    const pendingCash = Math.max(0, sellerEarnings - eligibleEarnings)
-    return { activeProducts, lowStock, pendingOrders, deliveredRevenue, deliveredCommission, sellerEarnings, eligibleEarnings, paid, due, pendingCash, deliveredOrders: delivered.length }
-  }, [products, orders, payouts, parentOrders])
+    const backendEligible = Number(payoutBalance?.eligible_unpaid ?? eligibleEarnings)
+    const due = Math.max(0, Number(payoutBalance?.available_to_request ?? Math.max(0, backendEligible - paid)))
+    const pendingCash = Math.max(0, sellerEarnings - backendEligible)
+    return { activeProducts, lowStock, pendingOrders, deliveredRevenue, deliveredCommission, sellerEarnings, eligibleEarnings: backendEligible, paid, due, pendingCash, deliveredOrders: delivered.length }
+  }, [products, orders, payouts, parentOrders, payoutBalance])
 
   const filteredProducts = useMemo(() => {
     const query = productSearch.trim().toLowerCase()
