@@ -5,10 +5,13 @@ import EmptyState from '../components/EmptyState'
 import Loader from '../components/Loader'
 import SmartImage from '../components/SmartImage'
 import StoreTrustBadge from '../components/StoreTrustBadge'
+import { useMarketLocation } from '../context/MarketLocationContext'
+import { rankStoresForLocation } from '../lib/marketLocation'
 import { supabase } from '../lib/supabase'
 import { logTechnicalError, userError } from '../lib/userErrors'
 
 export default function Stores() {
+  const { location: marketLocation } = useMarketLocation()
   const [stores, setStores] = useState([])
   const [sponsoredStoreIds, setSponsoredStoreIds] = useState([])
   const [loading, setLoading] = useState(true)
@@ -21,7 +24,7 @@ export default function Stores() {
     setError('')
     ;(async () => {
       const [storeResult, adResult] = await Promise.all([
-        supabase.from('stores').select('id,name,slug,description,logo_url,banner_url,country_code,city,currency,status,primary_category_id,is_verified,is_partner,created_at').eq('status','active').eq('country_code','CD').order('name'),
+        supabase.from('stores').select('id,name,slug,description,logo_url,banner_url,country_code,city,currency,status,primary_category_id,is_verified,is_partner,created_at').eq('status','active').eq('country_code',marketLocation.countryCode || 'CD').order('name'),
         supabase.rpc('list_active_ads',{ p_placement:'stores_featured', p_limit:50 }),
       ])
       if (storeResult.error) throw storeResult.error
@@ -37,7 +40,7 @@ export default function Stores() {
             return ar - br || a.name.localeCompare(b.name)
           })
         setSponsoredStoreIds(sponsored)
-        setStores(list)
+        setStores(rankStoresForLocation(list, marketLocation))
       }
     })().catch(loadError => {
       logTechnicalError('stores-directory', loadError)
@@ -47,7 +50,7 @@ export default function Stores() {
       }
     }).finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [retryKey])
+  }, [retryKey, marketLocation.countryCode, marketLocation.city])
 
   if (loading) return <Loader fullscreen />
   if (error) return <main className="section-shell page-space"><EmptyState title="Impossible de charger les boutiques" text={error} action={<button className="button primary" type="button" onClick={() => setRetryKey(value => value + 1)}>Réessayer</button>}/></main>
@@ -57,7 +60,7 @@ export default function Stores() {
       <div className="page-title">
         <span className="eyebrow">One Market</span>
         <h1>Boutiques</h1>
-        <p>Découvrez les boutiques disponibles sur One Market en RDC.</p>
+        <p>Découvrez les boutiques disponibles à {marketLocation.city || (marketLocation.countryCode === 'US' ? 'aux États-Unis' : 'en RDC')}.</p>
       </div>
       {stores.length ? (
         <div className="store-directory">
@@ -66,13 +69,13 @@ export default function Stores() {
               <div className="store-cover"><SmartImage src={store.banner_url} alt={store.name} className="store-banner-smart" fit="cover" width={500} sizes="(max-width: 760px) 94vw, (max-width: 1100px) 46vw, 380px" loading={storeIndex < 2 ? 'eager' : 'lazy'}/></div>
               <div className="store-directory-info">
                 <SmartImage src={store.logo_url} alt={store.name} className="store-logo-smart" fit="contain" width={90} sizes="64px"/>
-                <div><div className="store-directory-name"><h3>{store.name}</h3><StoreTrustBadge store={store} compact/></div>{sponsoredStoreIds.includes(store.id) && <span className="store-sponsored-label">Sponsorisé</span>}<p>RDC{store.city ? ` · ${store.city}` : ''}</p></div>
+                <div><div className="store-directory-name"><h3>{store.name}</h3><StoreTrustBadge store={store} compact/></div>{sponsoredStoreIds.includes(store.id) && <span className="store-sponsored-label">Sponsorisé</span>}<p>{store.country_code === 'US' ? 'USA' : 'RDC'}{store.city ? ` · ${store.city}` : ''}</p></div>
                 <ArrowRight size={19}/>
               </div>
             </Link>
           ))}
         </div>
-      ) : <EmptyState title="Aucune boutique disponible" text="Les boutiques disponibles en RDC apparaîtront ici."/>}
+      ) : <EmptyState title="Aucune boutique disponible" text={marketLocation.countryCode === 'US' ? 'One Market USA est en préparation. Les premières boutiques américaines apparaîtront ici.' : 'Les boutiques disponibles dans votre zone apparaîtront ici.'}/>}
     </main>
   )
 }
