@@ -5,11 +5,11 @@ export const MARKET_COUNTRIES = [
 
 export const MARKET_CITIES = {
   CD: [
-    'Kinshasa','Lubumbashi','Kolwezi','Likasi','Kipushi','Kasumbalesa','Kamina','Kalemie',
-    'Mbuji-Mayi','Kananga','Tshikapa','Mwene-Ditu','Kabinda','Kisangani','Goma','Bukavu',
-    'Uvira','Bunia','Beni','Butembo','Kindu','Matadi','Boma','Kikwit','Bandundu','Mbandaka',
-    'Gemena','Lisala','Isiro','Buta','Gbadolite','Inongo','Boende','Lodja','Ilebo','Kasongo',
-    'Manono','Pweto','Fungurume'
+    'Lubumbashi','Kinshasa','Likasi','Kolwezi','Goma','Bukavu','Kisangani','Mbuji-Mayi',
+    'Kananga','Kalemie','Kamina','Kipushi','Kasumbalesa','Fungurume','Tshikapa','Mwene-Ditu',
+    'Kabinda','Uvira','Bunia','Beni','Butembo','Kindu','Matadi','Boma','Kikwit','Bandundu',
+    'Mbandaka','Gemena','Lisala','Isiro','Buta','Gbadolite','Inongo','Boende','Lodja',
+    'Ilebo','Kasongo','Manono','Pweto'
   ],
   US: [
     'New York','Los Angeles','Chicago','Houston','Phoenix','Philadelphia','San Antonio',
