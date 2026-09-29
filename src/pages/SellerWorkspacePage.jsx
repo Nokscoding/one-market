@@ -474,13 +474,21 @@ export default function SellerWorkspacePage() {
     const lowStock = products.filter(product => product.is_active && Number(product.stock_qty) <= 5).length
     const pendingOrders = orders.filter(order => ACTIVE_ORDER_STATUSES.has(order.status)).length
     const delivered = orders.filter(order => order.status === 'delivered')
+    const eligibleDelivered = delivered.filter(order => {
+      const parent = parentOrders[order.order_id]
+      if (!parent) return false
+      if (parent.payment_method === 'mobile_money') return parent.payment_status === 'paid'
+      return parent.payment_method === 'cod' && parent.payment_status === 'cash_received'
+    })
     const deliveredRevenue = delivered.reduce((sum, order) => sum + Number(order.subtotal || 0), 0)
     const deliveredCommission = delivered.reduce((sum, order) => sum + Number(order.commission_amount || 0), 0)
     const sellerEarnings = delivered.reduce((sum, order) => sum + Number(order.seller_net_amount || 0), 0)
+    const eligibleEarnings = eligibleDelivered.reduce((sum, order) => sum + Number(order.seller_net_amount || 0), 0)
     const paid = payouts.filter(payout => payout.status === 'paid').reduce((sum, payout) => sum + Number(payout.net_amount || 0), 0)
-    const due = Math.max(0, sellerEarnings - paid)
-    return { activeProducts, lowStock, pendingOrders, deliveredRevenue, deliveredCommission, sellerEarnings, paid, due, deliveredOrders: delivered.length }
-  }, [products, orders, payouts])
+    const due = Math.max(0, eligibleEarnings - paid)
+    const pendingCash = Math.max(0, sellerEarnings - eligibleEarnings)
+    return { activeProducts, lowStock, pendingOrders, deliveredRevenue, deliveredCommission, sellerEarnings, eligibleEarnings, paid, due, pendingCash, deliveredOrders: delivered.length }
+  }, [products, orders, payouts, parentOrders])
 
   const filteredProducts = useMemo(() => {
     const query = productSearch.trim().toLowerCase()
@@ -593,9 +601,9 @@ export default function SellerWorkspacePage() {
             <article><span>Ventes livrées</span><strong>{money(stats.deliveredRevenue, 'USD')}</strong><small>{stats.deliveredOrders} commande{stats.deliveredOrders > 1 ? 's' : ''}</small></article>
             <article><span>Commission One Market</span><strong>{money(stats.deliveredCommission, 'USD')}</strong><small>Calculée selon le taux appliqué à chaque commande</small></article>
             <article><span>Vos revenus nets</span><strong>{money(stats.sellerEarnings, 'USD')}</strong><small>Après commission</small></article>
-            <article><span>À recevoir</span><strong>{money(stats.due, 'USD')}</strong><small>Selon les versements enregistrés</small></article>
+            <article><span>Disponible au versement</span><strong>{money(stats.due, 'USD')}</strong><small>Uniquement après paiement confirmé / cash remis à One Market</small></article>
           </div>
-          <section className="seller-panel"><div className="seller-panel-head"><div><h2>Historique des versements</h2><p>Ces informations sont en lecture seule. Les paiements sont validés par One Market.</p></div></div><div className="seller-payout-table"><div className="seller-payout-head"><span>Référence</span><span>Période</span><span>Montant net</span><span>Statut</span></div>{payouts.map(payout => <div key={payout.id}><span><strong>{payout.payout_number}</strong><small>{payout.payment_method || 'Mode à confirmer'}</small></span><span>{formatDate(payout.period_start)} – {formatDate(payout.period_end)}</span><strong>{money(payout.net_amount, payout.currency)}</strong><span className={`status-pill ${payout.status}`}>{payout.status === 'paid' ? 'Payé' : payout.status === 'approved' ? 'Approuvé' : payout.status === 'failed' ? 'Échec' : payout.status === 'cancelled' ? 'Annulé' : 'En attente'}</span></div>)}{!payouts.length && <div className="seller-empty"><WalletCards size={26}/><strong>Aucun versement enregistré</strong><span>Les versements apparaîtront ici lorsqu’ils seront préparés par One Market.</span></div>}</div></section>
+          {stats.pendingCash > 0 && <div className="seller-finance-lock-note"><WalletCards size={18}/><div><strong>En attente de remise COD : {money(stats.pendingCash,'USD')}</strong><span>Ce montant est livré mais ne devient payable qu’après remise et confirmation du cash par One Market.</span></div></div>}<section className="seller-panel"><div className="seller-panel-head"><div><h2>Historique des versements</h2><p>Ces informations sont en lecture seule. Les paiements sont validés par One Market.</p></div></div><div className="seller-payout-table"><div className="seller-payout-head"><span>Référence</span><span>Période</span><span>Montant net</span><span>Statut</span></div>{payouts.map(payout => <div key={payout.id}><span><strong>{payout.payout_number}</strong><small>{payout.payment_method || 'Mode à confirmer'}</small></span><span>{formatDate(payout.period_start)} – {formatDate(payout.period_end)}</span><strong>{money(payout.net_amount, payout.currency)}</strong><span className={`status-pill ${payout.status}`}>{payout.status === 'paid' ? 'Payé' : payout.status === 'approved' ? 'Approuvé' : payout.status === 'failed' ? 'Échec' : payout.status === 'cancelled' ? 'Annulé' : 'En attente'}</span></div>)}{!payouts.length && <div className="seller-empty"><WalletCards size={26}/><strong>Aucun versement enregistré</strong><span>Les versements apparaîtront ici lorsqu’ils seront préparés par One Market.</span></div>}</div></section>
         </section>}
 
         {!workspaceLoading && tab === 'ads' && <SellerAdsPanel store={selectedStore} products={products} categories={categories}/>}
