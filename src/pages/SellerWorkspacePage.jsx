@@ -237,16 +237,20 @@ export default function SellerWorkspacePage() {
     setWorkspaceLoading(true)
     setFeedback('')
     try {
-      const [productResult, orderResult, conversationResult, payoutResult] = await Promise.all([
+      const [productResult, orderResult, conversationResult, payoutResult, payoutRequestResult, payoutBalanceResult] = await Promise.all([
         supabase.from('products').select('id,store_id,category_id,name,slug,description,price,old_price,currency,stock_qty,has_variants,is_active,is_demo,created_at,updated_at').eq('store_id', storeId).order('created_at', { ascending: false }),
         supabase.from('seller_orders').select('id,order_id,store_id,seller_order_number,status,subtotal,currency,refusal_reason,created_at,updated_at,delivery_method,delivery_fee_cdf,delivery_currency,logistics_status,commission_percent,commission_amount,seller_net_amount,settlement_status').eq('store_id', storeId).order('created_at', { ascending: false }).limit(150),
         supabase.from('conversations').select('id,seller_order_id,store_id,customer_id,created_at,updated_at').eq('store_id', storeId).order('updated_at', { ascending: false }).limit(100),
         supabase.from('seller_payouts').select('id,payout_number,store_id,period_start,period_end,gross_amount,commission_amount,net_amount,currency,payment_method,payment_reference,status,scheduled_at,paid_at,created_at').eq('store_id', storeId).order('created_at', { ascending: false }).limit(100),
+        supabase.from('seller_payout_requests').select('id,store_id,seller_user_id,requested_amount,currency,status,seller_note,admin_note,payout_id,created_at,updated_at,reviewed_at').eq('store_id', storeId).order('created_at',{ascending:false}).limit(50),
+        supabase.rpc('seller_payout_balance',{p_store_id:storeId}),
       ])
       if (productResult.error) throw productResult.error
       if (orderResult.error) throw orderResult.error
       if (conversationResult.error) throw conversationResult.error
       if (payoutResult.error) throw payoutResult.error
+      if (payoutRequestResult.error && !isAdmin) throw payoutRequestResult.error
+      if (payoutBalanceResult.error && !isAdmin) throw payoutBalanceResult.error
 
       const productList = productResult.data || []
       const orderList = orderResult.data || []
@@ -255,6 +259,9 @@ export default function SellerWorkspacePage() {
       setConversations(conversationResult.data || [])
       setPickupCodes({})
       setPayouts(payoutResult.data || [])
+      setPayoutRequests(payoutRequestResult.data || [])
+      setPayoutBalance(payoutBalanceResult.data || { eligible_unpaid: 0, pending_requests: 0, available_to_request: 0, currency: 'USD' })
+      setPayoutRequestAmount(String(Number(payoutBalanceResult.data?.available_to_request || 0).toFixed(2)))
 
       const productIds = productList.map(item => item.id)
       const sellerOrderIds = orderList.map(item => item.id)
