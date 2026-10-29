@@ -19,6 +19,7 @@ const DEFAULT_PAYMENT_SETTINGS = {
   orange_money_number: '',
   airtel_money_number: '',
   mobile_money_rate_cdf_per_usd: 0,
+  mobile_money_backend_ready: false,
 }
 
 function whatsappDigits(value) {
@@ -99,7 +100,7 @@ export default function CheckoutPage() {
       }
       if (!data?.value) return
       const next = { ...DEFAULT_PAYMENT_SETTINGS, ...data.value }
-      const mobileAvailable = next.mobile_money_enabled === true && next.mobile_money_coming_soon !== true && Number(next.mobile_money_rate_cdf_per_usd) > 0 && Boolean(next.orange_money_number?.trim() || next.airtel_money_number?.trim())
+      const mobileAvailable = next.mobile_money_enabled === true && next.mobile_money_backend_ready === true && next.mobile_money_coming_soon !== true && Number(next.mobile_money_rate_cdf_per_usd) > 0 && Boolean(next.orange_money_number?.trim() || next.airtel_money_number?.trim())
       setPaymentSettings(next)
       if (!next.cod_enabled && mobileAvailable) setPaymentMethod('mobile_money')
       if (!mobileAvailable && next.cod_enabled) setPaymentMethod('cod')
@@ -182,7 +183,7 @@ export default function CheckoutPage() {
       ? [Number(logisticsSettings.intercity_express_min_days || 2), Number(logisticsSettings.intercity_express_max_days || 5)]
       : [Number(logisticsSettings.intercity_standard_min_days || 3), Number(logisticsSettings.intercity_standard_max_days || 7)]
     : null
-  const mobileMoneyAvailable = paymentSettings.mobile_money_enabled === true && paymentSettings.mobile_money_coming_soon !== true && Number(paymentSettings.mobile_money_rate_cdf_per_usd) > 0 && Boolean(paymentSettings.orange_money_number?.trim() || paymentSettings.airtel_money_number?.trim())
+  const mobileMoneyAvailable = paymentSettings.mobile_money_enabled === true && paymentSettings.mobile_money_backend_ready === true && paymentSettings.mobile_money_coming_soon !== true && Number(paymentSettings.mobile_money_rate_cdf_per_usd) > 0 && Boolean(paymentSettings.orange_money_number?.trim() || paymentSettings.airtel_money_number?.trim())
   const mobileProviders = [
     {code:'orange_money',label:'Orange Money',number:paymentSettings.orange_money_number},
     {code:'airtel_money',label:'Airtel Money',number:paymentSettings.airtel_money_number},
