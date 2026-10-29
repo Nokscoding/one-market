@@ -161,6 +161,7 @@ export default function OrderPage() {
     { code: 'airtel_money', label: 'Airtel Money', number: paymentSettings.airtel_money_number },
   ]
   const availableProviders = providers.filter(p => /^\\+?[0-9]{9,15}$/.test(String(p.number || '').trim()))
+  const selectedProvider = availableProviders.some(p => p.code === provider) ? provider : availableProviders[0]?.code
   const mobileConfigured = paymentSettings.mobile_money_enabled === true &&
     paymentSettings.mobile_money_coming_soon !== true &&
     Number(paymentSettings.mobile_money_rate_cdf_per_usd) > 0 &&
@@ -170,7 +171,7 @@ export default function OrderPage() {
     setPaymentError('')
     setPaymentBusy(true)
     try {
-      const { data, error } = await supabase.rpc('manual_mobile_money_prepare', { p_order_id: id, p_provider: provider })
+      const { data, error } = await supabase.rpc('manual_mobile_money_prepare', { p_order_id: id, p_provider: selectedProvider })
       if (error) throw error
       setPaymentClaim(data)
     } catch (err) {
@@ -217,7 +218,7 @@ export default function OrderPage() {
           {!paymentClaim && <div style={{marginTop:16,display:'grid',gap:12}}>
             {mobileConfigured ? <>
               <label>Choisissez l’opérateur
-                <select value={provider} onChange={event=>setProvider(event.target.value)}>
+                <select value={selectedProvider || ''} onChange={event=>setProvider(event.target.value)}>
                   {availableProviders.map(p=><option key={p.code} value={p.code}>{p.label}</option>)}
                 </select>
               </label>
