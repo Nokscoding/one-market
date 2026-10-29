@@ -67,6 +67,7 @@ export default function CheckoutPage() {
   const [paymentSettings, setPaymentSettings] = useState(DEFAULT_PAYMENT_SETTINGS)
   const [logisticsSettings, setLogisticsSettings] = useState({ intercity_surcharge_cdf: 25000, intercity_standard_min_days: 3, intercity_standard_max_days: 7, intercity_express_min_days: 2, intercity_express_max_days: 5 })
   const [paymentMethod, setPaymentMethod] = useState('cod')
+  const [mobileProvider, setMobileProvider] = useState('orange_money')
   const [promoCode, setPromoCode] = useState('')
   const [promoQuote, setPromoQuote] = useState(null)
   const [promoLoading, setPromoLoading] = useState(false)
@@ -182,7 +183,13 @@ export default function CheckoutPage() {
       : [Number(logisticsSettings.intercity_standard_min_days || 3), Number(logisticsSettings.intercity_standard_max_days || 7)]
     : null
   const mobileMoneyAvailable = paymentSettings.mobile_money_enabled === true && paymentSettings.mobile_money_coming_soon !== true && Number(paymentSettings.mobile_money_rate_cdf_per_usd) > 0 && Boolean(paymentSettings.orange_money_number?.trim() || paymentSettings.airtel_money_number?.trim())
-  const mobileMoneyNumber = [paymentSettings.orange_money_number?.trim(),paymentSettings.airtel_money_number?.trim()].filter(Boolean).join(' / ')
+  const mobileProviders = [
+    {code:'orange_money',label:'Orange Money',number:paymentSettings.orange_money_number},
+    {code:'airtel_money',label:'Airtel Money',number:paymentSettings.airtel_money_number},
+  ]
+  const configuredProviders = mobileProviders.filter(p=>/^([+])?[0-9]{9,15}$/.test(String(p.number||'').trim()))
+  const selectedMobileProvider = configuredProviders.some(p=>p.code===mobileProvider) ? mobileProvider : configuredProviders[0]?.code
+  const mobileMoneyNumber = configuredProviders.map(p=>p.label).join(' / ')
   const promoDiscount = Number(promoQuote?.discount_total || 0)
   const promoAdjustedTotal = Math.max(0, checkoutTotal - promoDiscount)
 
@@ -304,7 +311,7 @@ export default function CheckoutPage() {
       if (!buyNowMode) await refreshCart()
 
 
-      navigate(`/orders/${result.data}`)
+      navigate(paymentMethod === 'mobile_money' ? `/orders/${result.data}?provider=${selectedMobileProvider}` : `/orders/${result.data}`)
     } catch (checkoutError) {
       logTechnicalError('checkout-submit', checkoutError)
       setError(promoErrorMessage(checkoutError) || userError(checkoutError, 'checkout'))
@@ -363,7 +370,7 @@ export default function CheckoutPage() {
             <div className="checkout-market-section-head"><span>4</span><div><h2>Mode de paiement</h2><p>Choisissez comment régler votre commande.</p></div></div>
             <div className="payment-method-grid">
               {paymentSettings.cod_enabled && <button type="button" className={`payment-method-card ${paymentMethod === 'cod' ? 'active' : ''}`} onClick={() => setPaymentMethod('cod')}><Banknote size={22}/><span><strong>Paiement à la livraison</strong><small>Payez au livreur lorsque vous recevez votre commande.</small></span><span className="payment-radio">{paymentMethod === 'cod' && <Check size={15}/>}</span></button>}
-              {mobileMoneyAvailable ? <button type="button" className={`payment-method-card ${paymentMethod === 'mobile_money' ? 'active' : ''}`} onClick={() => setPaymentMethod('mobile_money')}><MessageCircle size={22}/><span><strong>Mobile Money</strong><small>Orange Money ou Airtel Money · validation manuelle après réception des fonds.</small></span><span className="payment-radio">{paymentMethod === 'mobile_money' && <Check size={15}/>}</span></button> : <button type="button" className="payment-method-card" disabled aria-disabled="true"><MessageCircle size={22}/><span><strong>Orange Money / Airtel Money — configuration en cours</strong><small>Disponible dès l’ajout des numéros officiels et du taux de facturation.</small></span></button>}
+              {mobileProviders.map(p => <button key={p.code} type="button" disabled={!mobileMoneyAvailable || !configuredProviders.some(x=>x.code===p.code)} className={`payment-method-card ${paymentMethod==='mobile_money' && selectedMobileProvider===p.code ? 'active' : ''}`} onClick={()=>{setPaymentMethod('mobile_money');setMobileProvider(p.code)}}><MessageCircle size={22}/><span><strong>{p.label}</strong><small>{mobileMoneyAvailable && configuredProviders.some(x=>x.code===p.code) ? 'Paiement par transfert · confirmation manuelle après contrôle' : 'Configuration en cours — numéro non disponible'}</small></span><span className="payment-radio">{paymentMethod==='mobile_money' && selectedMobileProvider===p.code && <Check size={15}/>}</span></button>)}
             </div>
             <label className="checkout-note-label">Instructions concernant la commande <small>Facultatif</small><textarea rows="3" maxLength="400" value={customerNote} onChange={event => setCustomerNote(event.target.value)} placeholder="Une précision utile concernant votre commande…"/></label>
           </section>
