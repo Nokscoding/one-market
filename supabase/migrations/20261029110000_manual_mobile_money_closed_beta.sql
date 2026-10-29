@@ -69,7 +69,7 @@ begin
   end if;
   v_number := nullif(btrim(v_settings->>(case when p_provider='orange_money' then 'orange_money_number' else 'airtel_money_number' end)),'');
   v_rate := coalesce(nullif(v_settings->>'mobile_money_rate_cdf_per_usd','')::numeric,0);
-  if v_number is null or v_number !~ '^\+?[0-9]{9,15}$' then raise exception 'PROVIDER_NOT_CONFIGURED'; end if;
+  if v_number is null or v_number !~ '^[+]?[0-9]{9,15}$' then raise exception 'PROVIDER_NOT_CONFIGURED'; end if;
   if v_rate <= 0 then raise exception 'PAYMENT_RATE_NOT_CONFIGURED'; end if;
   v_expected := round(coalesce(v_order.items_total,0) * v_rate + coalesce(v_order.delivery_fee_cdf,0))::bigint;
   if v_expected <= 0 then raise exception 'INVALID_PAYMENT_AMOUNT'; end if;
@@ -114,7 +114,7 @@ begin
   if length(v_reference)<6 or length(v_reference)>100 or v_reference !~ '^[A-Z0-9-]+$' then
     raise exception 'INVALID_REFERENCE';
   end if;
-  if v_phone !~ '^\+?[0-9]{9,15}$' then raise exception 'INVALID_SENDER_PHONE'; end if;
+  if v_phone !~ '^[+]?[0-9]{9,15}$' then raise exception 'INVALID_SENDER_PHONE'; end if;
 
   select * into v_claim from public.manual_mobile_money_payments
   where order_id=p_order_id and customer_id=auth.uid() for update;
