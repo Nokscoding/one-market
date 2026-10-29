@@ -163,7 +163,7 @@ export default function OrderPage() {
   ]
   const availableProviders = providers.filter(p => /^\\+?[0-9]{9,15}$/.test(String(p.number || '').trim()))
   const selectedProvider = availableProviders.some(p => p.code === provider) ? provider : availableProviders[0]?.code
-  const mobileConfigured = paymentSettings.mobile_money_enabled === true &&
+  const mobileConfigured = paymentSettings.mobile_money_enabled === true && paymentSettings.mobile_money_backend_ready === true &&
     paymentSettings.mobile_money_coming_soon !== true &&
     Number(paymentSettings.mobile_money_rate_cdf_per_usd) > 0 &&
     availableProviders.length > 0
