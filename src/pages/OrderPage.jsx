@@ -1,6 +1,6 @@
 import { Banknote, CheckCircle2, Clock3, MapPin, MessageCircle, PackageCheck, RefreshCw, Truck, Zap } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import EmptyState from '../components/EmptyState'
 import Loader from '../components/Loader'
 import ReportProblem from '../components/ReportProblem'
@@ -56,6 +56,7 @@ function snapshotAddress(snapshot = {}) {
 
 export default function OrderPage() {
   const { id } = useParams()
+  const [query] = useSearchParams()
   const [order, setOrder] = useState(null)
   const [subs, setSubs] = useState([])
   const [items, setItems] = useState({})
@@ -64,7 +65,7 @@ export default function OrderPage() {
   const [events, setEvents] = useState([])
   const [paymentSettings, setPaymentSettings] = useState({})
   const [paymentClaim, setPaymentClaim] = useState(null)
-  const [provider, setProvider] = useState('orange_money')
+  const [provider, setProvider] = useState(() => query.get('provider') === 'airtel_money' ? 'airtel_money' : 'orange_money')
   const [reference, setReference] = useState('')
   const [senderPhone, setSenderPhone] = useState('')
   const [paymentBusy, setPaymentBusy] = useState(false)
