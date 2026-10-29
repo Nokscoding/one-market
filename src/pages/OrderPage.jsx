@@ -62,7 +62,13 @@ export default function OrderPage() {
   const [stores, setStores] = useState({})
   const [conversations, setConversations] = useState({})
   const [events, setEvents] = useState([])
-  const [paymentSettings, setPaymentSettings] = useState({ mobile_money_whatsapp: '243995585991', mobile_money_display: '0995585991' })
+  const [paymentSettings, setPaymentSettings] = useState({})
+  const [paymentClaim, setPaymentClaim] = useState(null)
+  const [provider, setProvider] = useState('orange_money')
+  const [reference, setReference] = useState('')
+  const [senderPhone, setSenderPhone] = useState('')
+  const [paymentBusy, setPaymentBusy] = useState(false)
+  const [paymentError, setPaymentError] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -79,6 +85,14 @@ export default function OrderPage() {
       setOrder(currentOrder)
       if (paymentResult.data?.value) setPaymentSettings(current => ({ ...current, ...paymentResult.data.value }))
       if (!currentOrder) return
+      if (currentOrder.payment_method === 'mobile_money') {
+        const claimResult = await supabase.from('manual_mobile_money_payments')
+          .select('id,provider,recipient_number,expected_amount_cdf,exchange_rate_cdf_per_usd,transaction_reference,sender_phone,status,review_note,submitted_at,verified_at')
+          .eq('order_id', currentOrder.id).maybeSingle()
+        if (claimResult.error) throw claimResult.error
+        setPaymentClaim(claimResult.data || null)
+        if (claimResult.data?.provider) setProvider(claimResult.data.provider)
+      } else setPaymentClaim(null)
 
       const [subResult, eventResult] = await Promise.all([
         supabase.from('seller_orders').select('id,order_id,store_id,seller_order_number,status,subtotal,delivery_fee,total,currency,refusal_reason,created_at,updated_at,delivery_method,delivery_fee_cdf,delivery_currency,logistics_status,commission_percent,commission_amount,seller_net_amount,settlement_status').eq('order_id', currentOrder.id).order('created_at'),
@@ -142,8 +156,45 @@ export default function OrderPage() {
   const paymentLabel = paymentStatus[order.payment_status] || 'Paiement en attente'
   const reportSellerOrders = subs.map(sub => ({ ...sub, store: stores[sub.store_id] })).filter(sub => sub.store)
   const reportItems = Object.values(items).flat()
-  const mobileMoneyNumber = paymentSettings.mobile_money_display || paymentSettings.mobile_money_whatsapp || '0995585991'
-  const mobileMoneyLink = `https://wa.me/${whatsappDigits(paymentSettings.mobile_money_whatsapp || mobileMoneyNumber)}?text=${encodeURIComponent(`Bonjour One Market, je souhaite finaliser le paiement Mobile Money de ma commande ${order.order_number}.`)}`
+  const providers = [
+    { code: 'orange_money', label: 'Orange Money', number: paymentSettings.orange_money_number },
+    { code: 'airtel_money', label: 'Airtel Money', number: paymentSettings.airtel_money_number },
+  ]
+  const availableProviders = providers.filter(p => /^\\+?[0-9]{9,15}$/.test(String(p.number || '').trim()))
+  const mobileConfigured = paymentSettings.mobile_money_enabled === true &&
+    paymentSettings.mobile_money_coming_soon !== true &&
+    Number(paymentSettings.mobile_money_rate_cdf_per_usd) > 0 &&
+    availableProviders.length > 0
+
+  async function prepareManualPayment() {
+    setPaymentError('')
+    setPaymentBusy(true)
+    try {
+      const { data, error } = await supabase.rpc('manual_mobile_money_prepare', { p_order_id: id, p_provider: provider })
+      if (error) throw error
+      setPaymentClaim(data)
+    } catch (err) {
+      logTechnicalError('manual-mobile-invoice', err)
+      setPaymentError(userError(err, 'payment'))
+    } finally { setPaymentBusy(false) }
+  }
+
+  async function submitManualPayment(event) {
+    event.preventDefault()
+    setPaymentError('')
+    setPaymentBusy(true)
+    try {
+      const { error } = await supabase.rpc('manual_mobile_money_submit', {
+        p_order_id: id, p_reference: reference.trim(), p_sender_phone: senderPhone.trim(),
+      })
+      if (error) throw error
+      setReference('')
+      await load()
+    } catch (err) {
+      logTechnicalError('manual-mobile-submit', err)
+      setPaymentError(userError(err, 'payment'))
+    } finally { setPaymentBusy(false) }
+  }
   const shipping = order.shipping_snapshot || {}
   const tracker = trackingSteps(order)
 
@@ -159,7 +210,35 @@ export default function OrderPage() {
         <div className="order-address-summary"><MapPin size={19}/><div><strong>Livraison à {shipping.full_name || 'votre adresse'}</strong><span>{snapshotAddress(shipping) || 'Adresse enregistrée dans la commande'}</span>{shipping.landmark && <small>Repère : {shipping.landmark}</small>}{shipping.phone && <small>{shipping.phone}</small>}</div></div>
       </div>
 
-      {mobileMoney ? <div className="order-payment-summary"><MessageCircle size={19}/><div><strong>Mobile Money</strong><span>{paymentLabel}.</span>{!['paid','cancelled'].includes(order.payment_status) && <a className="button secondary" href={mobileMoneyLink} target="_blank" rel="noreferrer">Ouvrir WhatsApp</a>}</div></div> : <div className="order-payment-summary"><Banknote size={19}/><div><strong>Paiement à la livraison</strong><span>{paymentLabel}. Le règlement se fait auprès du livreur à la réception.</span></div></div>}
+      {mobileMoney ? <section className="order-payment-summary" style={{display:'block',padding:'1.25rem'}}>
+        <div style={{display:'flex',gap:12,alignItems:'center'}}><MessageCircle size={19}/><div><strong>Orange Money / Airtel Money</strong><span>{paymentLabel}. Validation manuelle par OneMarket.</span></div></div>
+        {paymentError && <p className="order-page-error" role="alert">{paymentError}</p>}
+        {!['paid','cancelled'].includes(order.payment_status) && <>
+          {!paymentClaim && <div style={{marginTop:16,display:'grid',gap:12}}>
+            {mobileConfigured ? <>
+              <label>Choisissez l’opérateur
+                <select value={provider} onChange={event=>setProvider(event.target.value)}>
+                  {availableProviders.map(p=><option key={p.code} value={p.code}>{p.label}</option>)}
+                </select>
+              </label>
+              <p>Créez d'abord votre facture Mobile Money. Le montant exact en francs et le numéro officiel s'afficheront avant votre transfert.</p>
+              <button className="button primary" type="button" disabled={paymentBusy} onClick={prepareManualPayment}>{paymentBusy?'Préparation…':'Afficher le montant et le numéro'}</button>
+            </> : <p>Les numéros de paiement seront communiqués avant l’ouverture de la bêta. Aucun transfert ne doit être effectué pour cette commande tant que les instructions officielles ne sont pas affichées.</p>}
+          </div>}
+          {paymentClaim && <div style={{marginTop:16,display:'grid',gap:12}}>
+            <div><strong>Facture Mobile Money</strong><p>Opérateur : {providers.find(p=>p.code===paymentClaim.provider)?.label || paymentClaim.provider}</p><p>Montant exact : <strong>{cdf(paymentClaim.expected_amount_cdf)}</strong></p><p>Envoyer au numéro : <strong>{paymentClaim.recipient_number}</strong></p><small>Le taux de facturation est fixé pour cette facture. Ne payez pas un autre montant.</small></div>
+            {paymentClaim.status==='submitted' && <p>Référence envoyée : <strong>{paymentClaim.transaction_reference}</strong>. Notre agent vérifie la réception des fonds. Ne renvoyez pas l'argent.</p>}
+            {paymentClaim.status==='rejected' && <p>Vérification non aboutie : {paymentClaim.review_note || 'contactez le service client'}. Vous pouvez soumettre une nouvelle référence après contrôle.</p>}
+            {['awaiting_payment','rejected'].includes(paymentClaim.status) && <form onSubmit={submitManualPayment} style={{display:'grid',gap:10}}>
+              <label>Identifiant de transaction<input required minLength="6" maxLength="100" autoComplete="off" value={reference} onChange={event=>setReference(event.target.value)} placeholder="Référence reçue par SMS"/></label>
+              <label>Numéro ayant effectué le transfert<input required inputMode="tel" autoComplete="tel" value={senderPhone} onChange={event=>setSenderPhone(event.target.value)} placeholder="+243…"/></label>
+              <button className="button primary" disabled={paymentBusy} type="submit">{paymentBusy?'Transmission…':'J’ai payé — soumettre la référence'}</button>
+              <small>Le paiement ne sera considéré comme reçu qu'après vérification du compte Mobile Money par le responsable.</small>
+            </form>}
+          </div>}
+        </>}
+        {order.payment_status==='paid' && <p>Paiement validé par OneMarket. La commande peut être préparée.</p>}
+      </section> : <div className="order-payment-summary"><Banknote size={19}/><div><strong>Paiement à la livraison</strong><span>{paymentLabel}. Le règlement se fait auprès du livreur à la réception.</span></div></div>}
 
       <section className="order-progress-panel">
         <div className="order-progress-head"><div><span>Suivi en direct</span><h2>Où en est votre commande ?</h2></div><Truck size={20}/></div>
