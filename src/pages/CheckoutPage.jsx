@@ -15,8 +15,11 @@ const DEFAULT_PAYMENT_SETTINGS = {
   cod_enabled: true,
   mobile_money_enabled: false,
   mobile_money_coming_soon: true,
-  mobile_money_whatsapp: '243995585991',
-  mobile_money_display: '0995585991',
+  mobile_money_whatsapp: '',
+  orange_money_number: '',
+  airtel_money_number: '',
+  mobile_money_rate_cdf_per_usd: 0,
+  mobile_money_backend_ready: false,
 }
 
 function whatsappDigits(value) {
@@ -65,6 +68,7 @@ export default function CheckoutPage() {
   const [paymentSettings, setPaymentSettings] = useState(DEFAULT_PAYMENT_SETTINGS)
   const [logisticsSettings, setLogisticsSettings] = useState({ intercity_surcharge_cdf: 25000, intercity_standard_min_days: 3, intercity_standard_max_days: 7, intercity_express_min_days: 2, intercity_express_max_days: 5 })
   const [paymentMethod, setPaymentMethod] = useState('cod')
+  const [mobileProvider, setMobileProvider] = useState('orange_money')
   const [promoCode, setPromoCode] = useState('')
   const [promoQuote, setPromoQuote] = useState(null)
   const [promoLoading, setPromoLoading] = useState(false)
@@ -96,7 +100,7 @@ export default function CheckoutPage() {
       }
       if (!data?.value) return
       const next = { ...DEFAULT_PAYMENT_SETTINGS, ...data.value }
-      const mobileAvailable = next.mobile_money_enabled === true && next.mobile_money_coming_soon !== true
+      const mobileAvailable = next.mobile_money_enabled === true && next.mobile_money_backend_ready === true && next.mobile_money_coming_soon !== true && Number(next.mobile_money_rate_cdf_per_usd) > 0 && Boolean(next.orange_money_number?.trim() || next.airtel_money_number?.trim())
       setPaymentSettings(next)
       if (!next.cod_enabled && mobileAvailable) setPaymentMethod('mobile_money')
       if (!mobileAvailable && next.cod_enabled) setPaymentMethod('cod')
@@ -179,8 +183,14 @@ export default function CheckoutPage() {
       ? [Number(logisticsSettings.intercity_express_min_days || 2), Number(logisticsSettings.intercity_express_max_days || 5)]
       : [Number(logisticsSettings.intercity_standard_min_days || 3), Number(logisticsSettings.intercity_standard_max_days || 7)]
     : null
-  const mobileMoneyAvailable = paymentSettings.mobile_money_enabled === true && paymentSettings.mobile_money_coming_soon !== true
-  const mobileMoneyNumber = paymentSettings.mobile_money_display || paymentSettings.mobile_money_whatsapp || '0995585991'
+  const mobileMoneyAvailable = paymentSettings.mobile_money_enabled === true && paymentSettings.mobile_money_backend_ready === true && paymentSettings.mobile_money_coming_soon !== true && Number(paymentSettings.mobile_money_rate_cdf_per_usd) > 0 && Boolean(paymentSettings.orange_money_number?.trim() || paymentSettings.airtel_money_number?.trim())
+  const mobileProviders = [
+    {code:'orange_money',label:'Orange Money',number:paymentSettings.orange_money_number},
+    {code:'airtel_money',label:'Airtel Money',number:paymentSettings.airtel_money_number},
+  ]
+  const configuredProviders = mobileProviders.filter(p=>/^([+])?[0-9]{9,15}$/.test(String(p.number||'').trim()))
+  const selectedMobileProvider = configuredProviders.some(p=>p.code===mobileProvider) ? mobileProvider : configuredProviders[0]?.code
+  const mobileMoneyNumber = configuredProviders.map(p=>p.label).join(' / ')
   const promoDiscount = Number(promoQuote?.discount_total || 0)
   const promoAdjustedTotal = Math.max(0, checkoutTotal - promoDiscount)
 
@@ -288,7 +298,6 @@ export default function CheckoutPage() {
     if (paymentMethod === 'cod' && !paymentSettings.cod_enabled) return setError('Le paiement à la livraison est momentanément indisponible.')
     if (paymentMethod === 'mobile_money' && !mobileMoneyAvailable) return setError('Le paiement Mobile Money arrive bientôt. Utilisez le paiement à la livraison pour le moment.')
 
-    const whatsappWindow = paymentMethod === 'mobile_money' ? window.open('about:blank', '_blank') : null
     setSubmitting(true)
     setError('')
 
@@ -302,19 +311,9 @@ export default function CheckoutPage() {
 
       if (!buyNowMode) await refreshCart()
 
-      if (paymentMethod === 'mobile_money') {
-        const orderResult = await supabase.from('orders').select('order_number').eq('id', result.data).maybeSingle()
-        const orderNumber = orderResult.data?.order_number || 'One Market'
-        const digits = whatsappDigits(paymentSettings.mobile_money_whatsapp || mobileMoneyNumber)
-        const promoText = promoDiscount > 0 ? ` (code ${promoQuote?.code}, réduction ${money(promoDiscount, 'USD')})` : ''
-        const text = encodeURIComponent(`Bonjour One Market, je souhaite finaliser le paiement Mobile Money de ma commande ${orderNumber}. Produits à régler : ${money(promoAdjustedTotal, 'USD')}${promoText} + livraison ${cdf(displayedDeliveryFee)}.`)
-        const whatsappUrl = `https://wa.me/${digits}?text=${text}`
-        if (whatsappWindow && !whatsappWindow.closed) whatsappWindow.location.href = whatsappUrl
-      }
 
-      navigate(`/orders/${result.data}`)
+      navigate(paymentMethod === 'mobile_money' ? `/orders/${result.data}?provider=${selectedMobileProvider}` : `/orders/${result.data}`)
     } catch (checkoutError) {
-      whatsappWindow?.close()
       logTechnicalError('checkout-submit', checkoutError)
       setError(promoErrorMessage(checkoutError) || userError(checkoutError, 'checkout'))
     } finally {
@@ -372,7 +371,7 @@ export default function CheckoutPage() {
             <div className="checkout-market-section-head"><span>4</span><div><h2>Mode de paiement</h2><p>Choisissez comment régler votre commande.</p></div></div>
             <div className="payment-method-grid">
               {paymentSettings.cod_enabled && <button type="button" className={`payment-method-card ${paymentMethod === 'cod' ? 'active' : ''}`} onClick={() => setPaymentMethod('cod')}><Banknote size={22}/><span><strong>Paiement à la livraison</strong><small>Payez au livreur lorsque vous recevez votre commande.</small></span><span className="payment-radio">{paymentMethod === 'cod' && <Check size={15}/>}</span></button>}
-              {mobileMoneyAvailable ? <button type="button" className={`payment-method-card ${paymentMethod === 'mobile_money' ? 'active' : ''}`} onClick={() => setPaymentMethod('mobile_money')}><MessageCircle size={22}/><span><strong>Mobile Money</strong><small>Paiement Mobile Money sécurisé One Market.</small></span><span className="payment-radio">{paymentMethod === 'mobile_money' && <Check size={15}/>}</span></button> : <button type="button" className="payment-method-card" disabled aria-disabled="true"><MessageCircle size={22}/><span><strong>Mobile Money — bientôt</strong><small>Arrive prochainement. Pour l’instant, payez directement au livreur à la réception.</small></span></button>}
+              {mobileProviders.map(p => <button key={p.code} type="button" disabled={!mobileMoneyAvailable || !configuredProviders.some(x=>x.code===p.code)} className={`payment-method-card ${paymentMethod==='mobile_money' && selectedMobileProvider===p.code ? 'active' : ''}`} onClick={()=>{setPaymentMethod('mobile_money');setMobileProvider(p.code)}}><MessageCircle size={22}/><span><strong>{p.label}</strong><small>{mobileMoneyAvailable && configuredProviders.some(x=>x.code===p.code) ? 'Paiement par transfert · confirmation manuelle après contrôle' : 'Configuration en cours — numéro non disponible'}</small></span><span className="payment-radio">{paymentMethod==='mobile_money' && selectedMobileProvider===p.code && <Check size={15}/>}</span></button>)}
             </div>
             <label className="checkout-note-label">Instructions concernant la commande <small>Facultatif</small><textarea rows="3" maxLength="400" value={customerNote} onChange={event => setCustomerNote(event.target.value)} placeholder="Une précision utile concernant votre commande…"/></label>
           </section>
@@ -382,7 +381,7 @@ export default function CheckoutPage() {
             <div className="checkout-review-grid">
               <div><MapPin size={18}/><span><strong>Livraison à</strong>{selectedAddress ? <>{<b>{addressTypeLabel(selectedAddress.address_type, selectedAddress.label)}</b>}<small>{selectedAddress.full_name} · {selectedAddress.phone}</small>{addressLines(selectedAddress).map((line, index) => <small key={index}>{line}</small>)}</> : <small>Aucune adresse sélectionnée</small>}</span>{selectedAddress && <button type="button" onClick={() => document.querySelector('.checkout-address-grid')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>Modifier</button>}</div>
               <div><Truck size={18}/><span><strong>Livraison</strong><b>{chosenDelivery.label}{intercityStoreCount ? ' · inter-ville' : ''}</b><small>{cdf(displayedDeliveryFee)}{deliveryEstimate ? ` · ${deliveryEstimate[0]}–${deliveryEstimate[1]} jours` : ''}</small></span></div>
-              <div><Banknote size={18}/><span><strong>Paiement</strong><b>{paymentMethod === 'mobile_money' ? 'Mobile Money' : 'Paiement à la livraison'}</b><small>{paymentMethod === 'mobile_money' ? `Assistance : ${mobileMoneyNumber}` : 'À régler à la réception'}</small></span></div>
+              <div><Banknote size={18}/><span><strong>Paiement</strong><b>{paymentMethod === 'mobile_money' ? 'Mobile Money' : 'Paiement à la livraison'}</b><small>{paymentMethod === 'mobile_money' ? `Orange Money / Airtel Money : ${mobileMoneyNumber}` : 'À régler à la réception'}</small></span></div>
             </div>
           </section>
 
@@ -406,7 +405,7 @@ export default function CheckoutPage() {
           <div><span>Livraison</span><strong>{cdf(displayedDeliveryFee)}</strong></div>
           <p className="checkout-currency-note">Les produits sont facturés en USD et la livraison en CDF. Ces montants ne sont pas mélangés dans un total artificiel.</p>
           <button className="button primary full" type="button" disabled={submitting || !selected || !checkoutItems.length} onClick={checkout}>{submitting ? 'Enregistrement de la commande…' : 'Passer la commande'}</button>
-          <small>Votre commande n’est confirmée qu’après son enregistrement réussi dans One Market.</small>
+          <small>Pour Mobile Money, la commande reste en attente jusqu’à la vérification manuelle du paiement.</small>
         </aside>
       </div>
     </main>
