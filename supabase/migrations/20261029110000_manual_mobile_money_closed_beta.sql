@@ -63,7 +63,7 @@ begin
   if v_order.currency <> 'USD' then raise exception 'UNSUPPORTED_ORDER_CURRENCY'; end if;
 
   select value into v_settings from public.marketplace_settings where key='payments';
-  if coalesce(v_settings->>'mobile_money_enabled','false') <> 'true'
+  if coalesce(v_settings->>'mobile_money_backend_ready','false') <> 'true' or coalesce(v_settings->>'mobile_money_enabled','false') <> 'true'
       or coalesce(v_settings->>'mobile_money_coming_soon','true') = 'true' then
     raise exception 'PAYMENT_DISABLED';
   end if;
@@ -226,7 +226,7 @@ update public.marketplace_settings
 set value=coalesce(value,'{}'::jsonb) ||
   '{"mobile_money_enabled":true,"mobile_money_coming_soon":false,
     "orange_money_number":"","airtel_money_number":"",
-    "mobile_money_rate_cdf_per_usd":0}'::jsonb,
+    "mobile_money_rate_cdf_per_usd":0,"mobile_money_backend_ready":true}'::jsonb,
   updated_at=now()
 where key='payments' and not (
   coalesce(value->>'orange_money_number','') <> ''
