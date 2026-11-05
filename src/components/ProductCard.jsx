@@ -93,10 +93,10 @@ export default function ProductCard({ product, priority = false, onOpen }) {
             className="product-card-add-button"
             onClick={handleAddToCart}
             disabled={adding || (showStock && stock <= 0)}
-            aria-label={`Mettre ${product.name} au panier`}
+            aria-label={`Ajouter ${product.name} au panier`}
           >
             <ShoppingCart size={17} aria-hidden="true"/>
-            <span>{adding ? 'Ajout en cours…' : showStock && stock <= 0 ? 'Indisponible' : 'Mettre au panier'}</span>
+            <span>{adding ? 'Ajout en cours…' : showStock && stock <= 0 ? 'Indisponible' : 'Ajouter au panier'}</span>
           </button>
           {cartError && <p className="product-card-cart-error" role="alert">{cartError}</p>}
         </div>
