@@ -1009,3 +1009,47 @@
   margin:0!important;
   box-sizing:border-box!important;
 }
+
+
+/* OneMarket beta — direct add-to-cart action on existing product cards. */
+.market-product-card .product-card-add-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 42px;
+  margin-top: 12px;
+  padding: 10px 8px;
+  border: 0;
+  border-radius: 10px;
+  background: #1357e6;
+  color: #fff;
+  font: inherit;
+  font-size: .82rem;
+  line-height: 1.15;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background .15s ease, transform .15s ease;
+}
+.market-product-card .product-card-add-button svg { flex: 0 0 auto; }
+.market-product-card .product-card-add-button:hover:not(:disabled) { background: #0c46c1; }
+.market-product-card .product-card-add-button:active:not(:disabled) { transform: scale(.985); }
+.market-product-card .product-card-add-button:focus-visible { outline: 3px solid #9fc0ff; outline-offset: 2px; }
+.market-product-card .product-card-add-button:disabled { background: #a8b3c5; cursor: not-allowed; }
+.market-product-card .product-card-cart-error {
+  margin: 6px 0 0;
+  color: #b42318;
+  font-size: .74rem;
+  line-height: 1.35;
+}
+@media (max-width: 430px) {
+  .market-product-card .product-card-add-button {
+    gap: 5px;
+    min-height: 39px;
+    padding: 9px 5px;
+    font-size: .73rem;
+    border-radius: 8px;
+  }
+  .market-product-card .product-card-add-button svg { width: 15px; height: 15px; }
+}
