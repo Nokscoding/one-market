@@ -1,7 +1,10 @@
-import { Eye } from 'lucide-react'
+import { Eye, ShoppingCart } from 'lucide-react'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import { useCart } from '../context/CartContext'
 import { money } from '../lib/format'
+import { logTechnicalError, userError } from '../lib/userErrors'
 import FavoriteButton from './FavoriteButton'
 import ProductQuickView from './ProductQuickView'
 import RatingStars from './RatingStars'
@@ -9,7 +12,12 @@ import SmartImage from './SmartImage'
 import StoreTrustBadge from './StoreTrustBadge'
 
 export default function ProductCard({ product, priority = false, onOpen }) {
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const { addItem } = useCart()
   const [quickView, setQuickView] = useState(false)
+  const [adding, setAdding] = useState(false)
+  const [cartError, setCartError] = useState('')
   const image = product.image || product.product_images?.[0]?.secure_url
   const store = product.store || product.stores
   const rating = Number(product.rating_avg) || 0
@@ -25,6 +33,30 @@ export default function ProductCard({ product, priority = false, onOpen }) {
   const sponsored = Boolean(product.sponsored)
 
   const notifyOpen = () => { if (typeof onOpen === 'function') onOpen(product) }
+
+  async function handleAddToCart() {
+    if (adding || (showStock && stock <= 0)) return
+    if (product.has_variants) {
+      navigate(`/product/${product.id}`)
+      return
+    }
+    if (!user) {
+      navigate('/auth', { state: { from: `/product/${product.id}` } })
+      return
+    }
+
+    setCartError('')
+    setAdding(true)
+    try {
+      await addItem(product.id)
+      navigate(`/cart?added=1&product=${encodeURIComponent(product.id)}&qty=1`)
+    } catch (error) {
+      logTechnicalError('cart.add-product-card', error)
+      setCartError(userError(error, 'cart'))
+    } finally {
+      setAdding(false)
+    }
+  }
 
   return (
     <>
@@ -56,6 +88,17 @@ export default function ProductCard({ product, priority = false, onOpen }) {
             {showStock ? <span className={`product-stock ${stock <= 0 ? 'is-out' : stock <= 5 ? 'is-low' : ''}`}>{stock <= 0 ? 'Rupture de stock' : stock <= 5 ? `Plus que ${stock}` : 'En stock'}</span> : <span className="product-stock">Options disponibles</span>}
             <span className="product-delivery-chip">Paiement au livreur</span>
           </div>
+          <button
+            type="button"
+            className="product-card-add-button"
+            onClick={handleAddToCart}
+            disabled={adding || (showStock && stock <= 0)}
+            aria-label={`Mettre ${product.name} au panier`}
+          >
+            <ShoppingCart size={17} aria-hidden="true"/>
+            <span>{adding ? 'Ajout en cours…' : showStock && stock <= 0 ? 'Indisponible' : 'Mettre au panier'}</span>
+          </button>
+          {cartError && <p className="product-card-cart-error" role="alert">{cartError}</p>}
         </div>
       </article>
       {quickView && <ProductQuickView product={product} onClose={() => setQuickView(false)}/>} 
